@@ -128,7 +128,12 @@
     <!-- フッター -->
     <footer class="footer py-4 mt-auto">
         <div class="container text-center">
-            <p>&copy; 2025 旅ログマップ. All rights reserved.</p>
+            <p class="mb-1 text-muted">&copy; {{ now|default:2024|date:"Y" }} 旅ログマップ</p>
+            <p class="mb-0">
+                <a href="https://maps-planner.vercel.app/" target="_blank" rel="noopener" class="text-decoration-none">
+                    <i class="fas fa-map-marked-alt me-1"></i>maps-planner.vercel.app
+                </a>
+            </p>
         </div>
     </footer>
 
