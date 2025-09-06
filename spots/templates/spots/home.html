@@ -5,14 +5,7 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-map-marked-alt me-2"></i>旅のスポット一覧</h1>
-            {% if user.is_authenticated %}
-            <a href="{% url 'add_spot' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>新しいスポットを投稿
-            </a>
-            {% endif %}
-        </div>
+        <h2 class="section-title">いちらん</h2>
 
         {% if search_query %}
         <div class="alert alert-info">
@@ -24,52 +17,23 @@
         <div class="row">
             {% for spot in page_obj %}
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
+                <div class="card h-100 spot-card">
                     {% if spot.image %}
-                    <img src="{{ spot.image.url }}" class="card-img-top" alt="{{ spot.title }}" 
-                         style="height: 200px; object-fit: cover;">
+                    <img src="{{ spot.image.url }}" class="card-img-top" alt="{{ spot.title }}">
                     {% else %}
-                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                         style="height: 200px;">
+                    <div class="card-img-top image-placeholder d-flex align-items-center justify-content-center">
                         <i class="fas fa-image fa-3x text-muted"></i>
                     </div>
                     {% endif %}
-                    
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">{{ spot.title }}</h5>
-                        <p class="card-text">{{ spot.description|truncatewords:20 }}</p>
-                        
-                        {% if spot.address %}
-                        <p class="card-text">
-                            <small class="text-muted">
-                                <i class="fas fa-map-marker-alt me-1"></i>{{ spot.address }}
-                            </small>
-                        </p>
-                        {% endif %}
-                        
-                        <div class="mt-auto">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">
-                                    <i class="fas fa-user me-1"></i>{{ spot.created_by.username }}
-                                </small>
-                                {% if spot.reviews.all %}
-                                <div class="rating">
-                                    {% with avg_rating=spot.reviews.all|length %}
-                                    {% for i in "12345" %}
-                                        {% if forloop.counter <= avg_rating %}
-                                        <i class="fas fa-star"></i>
-                                        {% else %}
-                                        <i class="far fa-star"></i>
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% endwith %}
-                                    <small>({{ spot.reviews.all|length }})</small>
-                                </div>
-                                {% endif %}
-                            </div>
-                            <a href="{% url 'spot_detail' spot.id %}" class="btn btn-primary btn-sm mt-2">
-                                詳細を見る
-                            </a>
+
+                    <div class="spot-info d-flex flex-column">
+                        <h5 class="spot-title">{{ spot.title }}</h5>
+                        <p class="spot-desc mb-2">{{ spot.description|truncatechars:70 }}</p>
+                        <div class="mt-auto d-flex align-items-center justify-content-between">
+                            {% if spot.address %}
+                            <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>{{ spot.address }}</small>
+                            {% endif %}
+                            <a href="{% url 'spot_detail' spot.id %}" class="btn btn-detail">詳細</a>
                         </div>
                     </div>
                 </div>
@@ -125,4 +89,3 @@
     </div>
 </div>
 {% endblock %}
-
