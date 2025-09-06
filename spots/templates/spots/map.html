@@ -1,0 +1,349 @@
+{% extends 'spots/base.html' %}
+
+{% block title %}マップ - 旅ログマップ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-map me-2"></i>旅ログマップ</h1>
+        <p class="text-muted">地図上のスポットをクリックして詳細を確認したり、新しいスポットを追加できます。</p>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-8">
+        <!-- マップコンテナ -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>インタラクティブマップ</h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="viewModeBtn">
+                        <i class="fas fa-eye me-1"></i>閲覧モード
+                    </button>
+                    {% if user.is_authenticated %}
+                    <button type="button" class="btn btn-sm btn-outline-success" id="addModeBtn">
+                        <i class="fas fa-plus me-1"></i>追加モード
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="map" style="height: 500px; width: 100%;"></div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <span id="modeIndicator">
+                        <i class="fas fa-eye me-1"></i>閲覧モード: スポットをクリックして詳細を表示
+                    </span>
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- スポット情報パネル -->
+        <div class="card" id="spotInfoPanel">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>スポット情報</h5>
+            </div>
+            <div class="card-body" id="spotInfoContent">
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                    <p>地図上のスポットをクリックして詳細を表示</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- スポット追加フォーム -->
+        {% if user.is_authenticated %}
+        <div class="card mt-3" id="addSpotPanel" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>新しいスポットを追加</h5>
+            </div>
+            <div class="card-body">
+                <form id="addSpotForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="spotTitle" class="form-label">スポット名 *</label>
+                        <input type="text" class="form-control" id="spotTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="spotDescription" class="form-label">説明 *</label>
+                        <textarea class="form-control" id="spotDescription" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="spotAddress" class="form-label">住所</label>
+                        <input type="text" class="form-control" id="spotAddress">
+                    </div>
+                    <div class="mb-3">
+                        <label for="spotImage" class="form-label">画像</label>
+                        <input type="file" class="form-control" id="spotImage" accept="image/*">
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <label for="spotLatitude" class="form-label">緯度</label>
+                            <input type="number" class="form-control" id="spotLatitude" step="any" readonly>
+                        </div>
+                        <div class="col-6">
+                            <label for="spotLongitude" class="form-label">経度</label>
+                            <input type="number" class="form-control" id="spotLongitude" step="any" readonly>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>スポットを保存
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="cancelAddBtn">
+                            <i class="fas fa-times me-2"></i>キャンセル
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- スポット一覧 -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>最近のスポット</h5>
+            </div>
+            <div class="card-body">
+                <div id="recentSpots">
+                    {% for spot in recent_spots %}
+                    <div class="d-flex align-items-center mb-2 spot-item" data-lat="{{ spot.latitude }}" data-lng="{{ spot.longitude }}" data-id="{{ spot.id }}">
+                        <div class="flex-shrink-0">
+                            {% if spot.image %}
+                            <img src="{{ spot.image.url }}" alt="{{ spot.title }}" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
+                            {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fas fa-image text-muted"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 ms-2">
+                            <h6 class="mb-0">{{ spot.title }}</h6>
+                            <small class="text-muted">{{ spot.created_by.username }}</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="focusSpot({{ spot.latitude }}, {{ spot.longitude }})">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// グローバル変数
+let map;
+let markers = [];
+let currentMode = 'view'; // 'view' or 'add'
+let tempMarker = null;
+
+// マップ初期化
+function initMap() {
+    // 東京を中心にマップを初期化
+    map = L.map('map').setView([35.6762, 139.6503], 10);
+    
+    // OpenStreetMapタイルレイヤーを追加
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // 既存のスポットをマーカーとして追加
+    loadSpots();
+    
+    // マップクリックイベント
+    map.on('click', onMapClick);
+}
+
+// スポットデータを読み込み
+function loadSpots() {
+    fetch('/api/spots/')
+        .then(response => response.json())
+        .then(data => {
+            data.spots.forEach(spot => {
+                addSpotMarker(spot);
+            });
+        })
+        .catch(error => console.error('Error loading spots:', error));
+}
+
+// スポットマーカーを追加
+function addSpotMarker(spot) {
+    const marker = L.marker([spot.latitude, spot.longitude])
+        .addTo(map)
+        .bindPopup(`
+            <div class="popup-content">
+                <h6>${spot.title}</h6>
+                <p class="mb-1">${spot.description.substring(0, 100)}...</p>
+                <small class="text-muted">投稿者: ${spot.created_by}</small><br>
+                <a href="/spot/${spot.id}/" class="btn btn-sm btn-primary mt-2">詳細を見る</a>
+            </div>
+        `);
+    
+    marker.on('click', function() {
+        showSpotInfo(spot);
+    });
+    
+    markers.push(marker);
+}
+
+// スポット情報を表示
+function showSpotInfo(spot) {
+    const content = `
+        <div class="text-center mb-3">
+            ${spot.image ? `<img src="${spot.image}" alt="${spot.title}" class="img-fluid rounded" style="max-height: 200px;">` : '<i class="fas fa-image fa-3x text-muted"></i>'}
+        </div>
+        <h5>${spot.title}</h5>
+        <p>${spot.description}</p>
+        ${spot.address ? `<p><i class="fas fa-map-marker-alt me-1"></i>${spot.address}</p>` : ''}
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                <i class="fas fa-user me-1"></i>${spot.created_by}<br>
+                <i class="fas fa-calendar me-1"></i>${new Date(spot.created_at).toLocaleDateString('ja-JP')}
+            </small>
+            <a href="/spot/${spot.id}/" class="btn btn-primary btn-sm">詳細を見る</a>
+        </div>
+    `;
+    document.getElementById('spotInfoContent').innerHTML = content;
+}
+
+// マップクリックイベント処理
+function onMapClick(e) {
+    if (currentMode === 'add') {
+        // 既存の一時マーカーを削除
+        if (tempMarker) {
+            map.removeLayer(tempMarker);
+        }
+        
+        // 新しい一時マーカーを追加
+        tempMarker = L.marker([e.latlng.lat, e.latlng.lng])
+            .addTo(map)
+            .bindPopup('新しいスポットの位置')
+            .openPopup();
+        
+        // フォームに座標を設定
+        document.getElementById('spotLatitude').value = e.latlng.lat;
+        document.getElementById('spotLongitude').value = e.latlng.lng;
+        
+        // 逆ジオコーディング（住所取得）
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+    }
+}
+
+// 逆ジオコーディング
+function reverseGeocode(lat, lng) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ja`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.display_name) {
+                document.getElementById('spotAddress').value = data.display_name;
+            }
+        })
+        .catch(error => console.error('Reverse geocoding error:', error));
+}
+
+// モード切り替え
+function switchMode(mode) {
+    currentMode = mode;
+    
+    if (mode === 'view') {
+        document.getElementById('viewModeBtn').classList.add('active');
+        document.getElementById('addModeBtn').classList.remove('active');
+        document.getElementById('addSpotPanel').style.display = 'none';
+        document.getElementById('modeIndicator').innerHTML = '<i class="fas fa-eye me-1"></i>閲覧モード: スポットをクリックして詳細を表示';
+        
+        // 一時マーカーを削除
+        if (tempMarker) {
+            map.removeLayer(tempMarker);
+            tempMarker = null;
+        }
+    } else if (mode === 'add') {
+        document.getElementById('viewModeBtn').classList.remove('active');
+        document.getElementById('addModeBtn').classList.add('active');
+        document.getElementById('addSpotPanel').style.display = 'block';
+        document.getElementById('modeIndicator').innerHTML = '<i class="fas fa-plus me-1"></i>追加モード: 地図をクリックしてスポットを追加';
+    }
+}
+
+// スポットにフォーカス
+function focusSpot(lat, lng) {
+    map.setView([lat, lng], 15);
+}
+
+// スポット追加フォーム送信
+document.getElementById('addSpotForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('title', document.getElementById('spotTitle').value);
+    formData.append('description', document.getElementById('spotDescription').value);
+    formData.append('address', document.getElementById('spotAddress').value);
+    formData.append('latitude', document.getElementById('spotLatitude').value);
+    formData.append('longitude', document.getElementById('spotLongitude').value);
+    
+    const imageFile = document.getElementById('spotImage').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+    
+    // CSRFトークンを追加
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('/api/spots/add/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 成功時の処理
+            alert('スポットが追加されました！');
+            
+            // フォームをリセット
+            document.getElementById('addSpotForm').reset();
+            
+            // 一時マーカーを削除
+            if (tempMarker) {
+                map.removeLayer(tempMarker);
+                tempMarker = null;
+            }
+            
+            // 新しいスポットマーカーを追加
+            addSpotMarker(data.spot);
+            
+            // 閲覧モードに切り替え
+            switchMode('view');
+        } else {
+            alert('エラーが発生しました: ' + (data.error || '不明なエラー'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('スポットの追加に失敗しました。');
+    });
+});
+
+// イベントリスナー
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    
+    // モード切り替えボタン
+    document.getElementById('viewModeBtn').addEventListener('click', () => switchMode('view'));
+    {% if user.is_authenticated %}
+    document.getElementById('addModeBtn').addEventListener('click', () => switchMode('add'));
+    document.getElementById('cancelAddBtn').addEventListener('click', () => switchMode('view'));
+    {% endif %}
+});
+</script>
+{% endblock %}
+
