@@ -256,11 +256,16 @@ function reverseGeocode(lat, lng) {
 function switchMode(mode) {
     currentMode = mode;
     
+    const viewBtn = document.getElementById('viewModeBtn');
+    const addBtn = document.getElementById('addModeBtn');
+    const addPanel = document.getElementById('addSpotPanel');
+    const indicator = document.getElementById('modeIndicator');
+
     if (mode === 'view') {
-        document.getElementById('viewModeBtn').classList.add('active');
-        document.getElementById('addModeBtn').classList.remove('active');
-        document.getElementById('addSpotPanel').style.display = 'none';
-        document.getElementById('modeIndicator').innerHTML = '<i class="fas fa-eye me-1"></i>閲覧モード: スポットをクリックして詳細を表示';
+        if (viewBtn) viewBtn.classList.add('active');
+        if (addBtn) addBtn.classList.remove('active');
+        if (addPanel) addPanel.style.display = 'none';
+        if (indicator) indicator.innerHTML = '<i class="fas fa-eye me-1"></i>閲覧モード: スポットをクリックして詳細を表示';
         
         // 一時マーカーを削除
         if (tempMarker) {
@@ -268,10 +273,12 @@ function switchMode(mode) {
             tempMarker = null;
         }
     } else if (mode === 'add') {
-        document.getElementById('viewModeBtn').classList.remove('active');
-        document.getElementById('addModeBtn').classList.add('active');
-        document.getElementById('addSpotPanel').style.display = 'block';
-        document.getElementById('modeIndicator').innerHTML = '<i class="fas fa-plus me-1"></i>追加モード: 地図をクリックしてスポットを追加';
+        // 未ログインなどで要素がなければ何もしない
+        if (!addBtn || !addPanel) return;
+        if (viewBtn) viewBtn.classList.remove('active');
+        addBtn.classList.add('active');
+        addPanel.style.display = 'block';
+        if (indicator) indicator.innerHTML = '<i class="fas fa-plus me-1"></i>追加モード: 地図をクリックしてスポットを追加';
     }
 }
 
@@ -280,70 +287,83 @@ function focusSpot(lat, lng) {
     map.setView([lat, lng], 15);
 }
 
-// スポット追加フォーム送信
-document.getElementById('addSpotForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData();
-    formData.append('title', document.getElementById('spotTitle').value);
-    formData.append('description', document.getElementById('spotDescription').value);
-    formData.append('address', document.getElementById('spotAddress').value);
-    formData.append('latitude', document.getElementById('spotLatitude').value);
-    formData.append('longitude', document.getElementById('spotLongitude').value);
-    
-    const imageFile = document.getElementById('spotImage').files[0];
-    if (imageFile) {
-        formData.append('image', imageFile);
-    }
-    
-    // CSRFトークンを追加
-    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-    
-    fetch('/api/spots/add/', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // 成功時の処理
-            alert('スポットが追加されました！');
-            
-            // フォームをリセット
-            document.getElementById('addSpotForm').reset();
-            
-            // 一時マーカーを削除
-            if (tempMarker) {
-                map.removeLayer(tempMarker);
-                tempMarker = null;
-            }
-            
-            // 新しいスポットマーカーを追加
-            addSpotMarker(data.spot);
-            
-            // 閲覧モードに切り替え
-            switchMode('view');
-        } else {
-            alert('エラーが発生しました: ' + (data.error || '不明なエラー'));
+// スポット追加フォーム送信（存在チェック付き）
+function bindAddSpotFormSubmit() {
+    const form = document.getElementById('addSpotForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('title', document.getElementById('spotTitle').value);
+        formData.append('description', document.getElementById('spotDescription').value);
+        formData.append('address', document.getElementById('spotAddress').value);
+        formData.append('latitude', document.getElementById('spotLatitude').value);
+        formData.append('longitude', document.getElementById('spotLongitude').value);
+        
+        const imageFile = document.getElementById('spotImage')?.files?.[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('スポットの追加に失敗しました。');
+        
+        // CSRFトークンを追加（存在チェック）
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrf) {
+            formData.append('csrfmiddlewaretoken', csrf.value);
+        }
+        
+        fetch('/api/spots/add/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 成功時の処理
+                alert('スポットが追加されました！');
+                
+                // フォームをリセット
+                form.reset();
+                
+                // 一時マーカーを削除
+                if (tempMarker) {
+                    map.removeLayer(tempMarker);
+                    tempMarker = null;
+                }
+                
+                // 新しいスポットマーカーを追加
+                addSpotMarker(data.spot);
+                
+                // 閲覧モードに切り替え
+                switchMode('view');
+            } else {
+                alert('エラーが発生しました: ' + (data.error || '不明なエラー'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('スポットの追加に失敗しました。');
+        });
     });
-});
+}
 
 // イベントリスナー
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
     
+    // 追加フォームのイベント登録（存在する場合のみ）
+    bindAddSpotFormSubmit();
+    
     // モード切り替えボタン
-    document.getElementById('viewModeBtn').addEventListener('click', () => switchMode('view'));
+    const viewBtn = document.getElementById('viewModeBtn');
+    if (viewBtn) viewBtn.addEventListener('click', () => switchMode('view'));
     {% if user.is_authenticated %}
-    document.getElementById('addModeBtn').addEventListener('click', () => switchMode('add'));
-    document.getElementById('cancelAddBtn').addEventListener('click', () => switchMode('view'));
+    const addBtn = document.getElementById('addModeBtn');
+    if (addBtn) addBtn.addEventListener('click', () => switchMode('add'));
+    const cancelBtn = document.getElementById('cancelAddBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => switchMode('view'));
     {% endif %}
 });
 </script>
 {% endblock %}
-
