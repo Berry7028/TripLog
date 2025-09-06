@@ -16,7 +16,7 @@
         {% if page_obj %}
         <div class="row">
             {% for spot in page_obj %}
-            <div class="col-md-4 mb-4">
+            <div class="col-12 col-sm-6 col-md-4 mb-4">
                 <div class="card h-100 spot-card">
                     {% if spot.image %}
                     <img src="{{ spot.image.url }}" class="card-img-top" alt="{{ spot.title }}">

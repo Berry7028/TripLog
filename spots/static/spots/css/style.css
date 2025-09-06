@@ -124,3 +124,38 @@ body { background: var(--page-cream); }
   padding: 18px 18px 12px;
 }
 .details-title { font-size: 1.5rem; color: #111; }
+
+/* Responsive tweaks */
+@media (max-width: 991.98px) {
+  .section-title { font-size: 1.75rem; }
+}
+
+@media (max-width: 767.98px) {
+  /* Typography and spacing */
+  .section-title { font-size: 1.5rem; }
+  .spot-title { font-size: 1.1rem; }
+  .spot-desc { font-size: .95rem; }
+
+  /* Navbar search full-width on mobile */
+  .navbar .search-group { width: 100%; }
+  .navbar .search-input { font-size: 16px; } /* avoid iOS zoom */
+  .navbar-nav .nav-item { margin-bottom: .5rem; }
+  .navbar-nav .nav-item.d-flex { flex-direction: column; align-items: flex-start; }
+
+  /* Cards and images */
+  .spot-card .card-img-top,
+  .spot-card .image-placeholder { height: 160px; }
+
+  /* Detail hero image override */
+  .spot-hero { height: auto !important; max-height: 45vh !important; }
+
+  /* Map heights on small screens */
+  .map-surface,
+  .map-frame,
+  #map.map-frame { height: 60vh !important; min-height: 300px !important; }
+  #spotMap { height: 260px !important; }
+  #pickMap { height: 260px !important; }
+
+  /* Panels */
+  .details-surface { min-height: auto; }
+}

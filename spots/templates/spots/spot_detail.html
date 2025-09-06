@@ -7,7 +7,7 @@
     <div class="col-md-8">
         <div class="card">
             {% if spot.image %}
-            <img src="{{ spot.image.url }}" class="card-img-top" alt="{{ spot.title }}" 
+            <img src="{{ spot.image.url }}" class="card-img-top spot-hero" alt="{{ spot.title }}" 
                  style="height: 400px; object-fit: cover;">
             {% endif %}
             
@@ -189,4 +189,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
