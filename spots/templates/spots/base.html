@@ -67,7 +67,7 @@
                 <!-- 検索フォーム -->
                 <form class="d-flex me-3" method="GET" action="{% url 'home' %}">
                     <input class="form-control me-2" type="search" name="search" 
-                           placeholder="スポットを検索..." value="{{ search_query }}">
+                           placeholder="スポットを検索..." value="{{ search_query|default_if_none:'' }}">
                     <button class="btn btn-outline-primary" type="submit">
                         <i class="fas fa-search"></i>
                     </button>

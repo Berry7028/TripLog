@@ -15,7 +15,8 @@ def home(request):
     spots = Spot.objects.all().select_related('created_by').prefetch_related('reviews')
     
     # 検索機能
-    search_query = request.GET.get('search')
+    # 空や未指定でもフォームに"None"が入らないよう空文字に正規化
+    search_query = request.GET.get('search', '') or ''
     if search_query:
         spots = spots.filter(
             Q(title__icontains=search_query) |
@@ -257,4 +258,3 @@ def add_spot_api(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です。'})
-
