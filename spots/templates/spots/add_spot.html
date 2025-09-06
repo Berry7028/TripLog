@@ -56,6 +56,25 @@
                         {% if form.address.errors %}
                         <div class="text-danger">{{ form.address.errors }}</div>
                         {% endif %}
+                        <div class="form-text text-muted" style="font-size: 0.95em;">
+                            ※地図をクリックして追加した場合、反映が遅い場合があります
+                        </div>
+                    </div>
+
+                    <!-- かんたん位置選択 -->
+                    <div class="mb-3">
+                        <label class="form-label">地図で位置を選択（任意）</label>
+                        <div class="input-group mb-2">
+                            <input type="text" id="placeSearchInput" class="form-control" placeholder="住所や施設名で検索">
+                            <button type="button" id="placeSearchBtn" class="btn btn-outline-primary">
+                                <i class="fas fa-search me-1"></i>検索
+                            </button>
+                            <button type="button" id="useMyLocationBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-location-arrow me-1"></i>現在地
+                            </button>
+                        </div>
+                        <div id="pickMap" style="height: 320px; width: 100%;" class="rounded border"></div>
+                        <div class="form-text">地図をクリックすると緯度・経度に自動入力されます。</div>
                     </div>
 
                     <div class="mb-3">
@@ -78,52 +97,124 @@
                 </form>
             </div>
         </div>
-
-        <!-- 位置情報取得のヒント -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h5><i class="fas fa-info-circle me-2"></i>位置情報の取得方法</h5>
-            </div>
-            <div class="card-body">
-                <p>緯度・経度は以下の方法で取得できます：</p>
-                <ul>
-                    <li><strong>Google Maps</strong>: 地図上で右クリック → 座標をクリック</li>
-                    <li><strong>スマートフォン</strong>: 位置情報アプリや地図アプリで確認</li>
-                    <li><strong>GPS機器</strong>: 専用のGPS機器で測定</li>
-                </ul>
-                <p class="mb-0">
-                    <small class="text-muted">
-                        例: 東京駅の場合、緯度: 35.6812, 経度: 139.7671
-                    </small>
-                </p>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// 画像プレビュー機能
-document.getElementById('id_image').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            // プレビュー要素があれば表示
-            let preview = document.getElementById('image-preview');
-            if (!preview) {
-                preview = document.createElement('img');
-                preview.id = 'image-preview';
-                preview.className = 'img-thumbnail mt-2';
-                preview.style.maxWidth = '200px';
-                e.target.parentNode.appendChild(preview);
-            }
-            preview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+document.addEventListener('DOMContentLoaded', function() {
+    // 画像プレビュー機能（安全な参照で実装）
+    const imageInput = document.getElementById('id_image');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(ev) {
+            const file = ev.target.files && ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(frEv) {
+                let preview = document.getElementById('image-preview');
+                if (!preview) {
+                    preview = document.createElement('img');
+                    preview.id = 'image-preview';
+                    preview.className = 'img-thumbnail mt-2';
+                    preview.style.maxWidth = '200px';
+                    imageInput.parentNode.appendChild(preview);
+                }
+                preview.src = frEv.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // --- 地図で位置選択 ---
+    const mapEl = document.getElementById('pickMap');
+    if (!mapEl || typeof L === 'undefined') return; // Leafletロード失敗時は無視
+
+    const latInput = document.getElementById('id_latitude');
+    const lngInput = document.getElementById('id_longitude');
+    const addrInput = document.getElementById('id_address');
+
+    const tokyo = [35.6762, 139.6503];
+    const pickMap = L.map('pickMap').setView(tokyo, 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(pickMap);
+
+    let pickMarker = null;
+    function setMarker(lat, lng, label) {
+        if (pickMarker) pickMap.removeLayer(pickMarker);
+        pickMarker = L.marker([lat, lng]);
+        if (label) pickMarker.bindPopup(label).openPopup();
+        pickMarker.addTo(pickMap);
+    }
+
+    function setLatLngFields(lat, lng) {
+        if (latInput) latInput.value = lat;
+        if (lngInput) lngInput.value = lng;
+    }
+
+    function reverseGeocode(lat, lng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ja`)
+            .then(r => r.json())
+            .then(d => {
+                if (addrInput && d && d.display_name) addrInput.value = d.display_name;
+            })
+            .catch(() => {});
+    }
+
+    pickMap.on('click', function(e) {
+        const { lat, lng } = e.latlng;
+        setLatLngFields(lat, lng);
+        setMarker(lat, lng, 'ここに追加');
+        reverseGeocode(lat, lng);
+    });
+
+    // 検索
+    const searchInput = document.getElementById('placeSearchInput');
+    const searchBtn = document.getElementById('placeSearchBtn');
+    function runSearch() {
+        const q = (searchInput && searchInput.value || '').trim();
+        if (!q) return;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&addressdetails=1&accept-language=ja`)
+            .then(r => r.json())
+            .then(results => {
+                if (!results || !results.length) return;
+                const top = results[0];
+                const lat = parseFloat(top.lat), lon = parseFloat(top.lon);
+                pickMap.setView([lat, lon], 15);
+                setMarker(lat, lon, top.display_name);
+                setLatLngFields(lat, lon);
+                if (addrInput) addrInput.value = top.display_name;
+            })
+            .catch(() => {});
+    }
+    if (searchBtn) searchBtn.addEventListener('click', runSearch);
+    if (searchInput) searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            runSearch();
+        }
+    });
+
+    // 現在地ボタン
+    const geoBtn = document.getElementById('useMyLocationBtn');
+    if (geoBtn && 'geolocation' in navigator) {
+        geoBtn.addEventListener('click', function() {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                pickMap.setView([lat, lon], 15);
+                setMarker(lat, lon, '現在地');
+                setLatLngFields(lat, lon);
+                reverseGeocode(lat, lon);
+            }, function() {
+                geoBtn.classList.add('disabled');
+            });
+        });
     }
 });
 </script>
 {% endblock %}
-
