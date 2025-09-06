@@ -1,0 +1,92 @@
+{% extends 'spots/base.html' %}
+
+{% block title %}マップ - 旅ログマップ{% endblock %}
+
+{% block content %}
+<div class="row mt-2 mb-3">
+    <div class="col-md-8">
+        <div class="map-surface" style="height: 80vh; min-height: 500px;">
+            <div id="map" class="map-frame" style="height: 100%; min-height: 500px;"></div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="details-surface" id="spotInfoPanel">
+            <h3 class="details-title">スポット詳細</h3>
+            <div id="spotInfoContent" class="pt-2">
+                <div class="text-muted py-4">地図上のスポットをクリックして詳細を表示</div>
+            </div>
+        </div>
+        
+        <!-- 最近のスポット一覧（簡易） -->
+        {% if recent_spots %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>最近のスポット</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for s in recent_spots %}
+                    <a class="list-group-item list-group-item-action" href="{% url 'spot_detail' s.id %}">
+                        {{ s.title }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// シンプルなマップ画面用スクリプト
+let map;
+
+function initMap() {
+    map = L.map('map', { zoomControl: true }).setView([35.6762, 139.6503], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    loadSpots();
+}
+
+function loadSpots() {
+    fetch('/api/spots/')
+        .then(r => r.json())
+        .then(data => data.spots.forEach(addSpotMarker))
+        .catch(() => {});
+}
+
+function addSpotMarker(spot) {
+    const marker = L.marker([spot.latitude, spot.longitude]).addTo(map);
+    marker.on('click', () => showSpotInfo(spot));
+}
+
+function showSpotInfo(spot) {
+    const content = `
+        <div class="text-center mb-3">
+            ${spot.image ? `<img src="${spot.image}" alt="${spot.title}" class="img-fluid rounded" style="max-height: 200px;">` : '<i class="fas fa-image fa-3x text-muted"></i>'}
+        </div>
+        <h5>${spot.title}</h5>
+        <p>${spot.description}</p>
+        ${spot.address ? `<p><i class=\"fas fa-map-marker-alt me-1\"></i>${spot.address}</p>` : ''}
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                <i class="fas fa-user me-1"></i>${spot.created_by}<br>
+                <i class="fas fa-calendar me-1"></i>${new Date(spot.created_at).toLocaleDateString('ja-JP')}
+            </small>
+            <a href="/spot/${spot.id}/" class="btn btn-primary btn-sm">詳細を見る</a>
+        </div>`;
+    document.getElementById('spotInfoContent').innerHTML = content;
+}
+
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}
+

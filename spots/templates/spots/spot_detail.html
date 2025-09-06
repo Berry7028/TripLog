@@ -1,0 +1,191 @@
+{% extends 'spots/base.html' %}
+
+{% block title %}{{ spot.title }} - 旅ログマップ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            {% if spot.image %}
+            <img src="{{ spot.image.url }}" class="card-img-top spot-hero" alt="{{ spot.title }}" 
+                 style="height: 400px; object-fit: cover;">
+            {% endif %}
+            
+            <div class="card-body">
+                <h1 class="card-title">{{ spot.title }}</h1>
+                
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-user me-1"></i>投稿者: {{ spot.created_by.username }}
+                        <span class="ms-3">
+                            <i class="fas fa-calendar me-1"></i>{{ spot.created_at|date:"Y年m月d日" }}
+                        </span>
+                    </small>
+                </div>
+
+                {% if spot.address %}
+                <p class="mb-3">
+                    <i class="fas fa-map-marker-alt me-2"></i>{{ spot.address }}
+                </p>
+                {% endif %}
+
+                <p class="card-text">{{ spot.description|linebreaks }}</p>
+
+                <div class="mb-3">
+                    <small class="text-muted">
+                        緯度: {{ spot.latitude }}, 経度: {{ spot.longitude }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- レビューセクション -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3><i class="fas fa-star me-2"></i>レビュー</h3>
+                {% if avg_rating %}
+                <div class="rating">
+                    平均評価: 
+                    {% for i in "12345" %}
+                        {% if forloop.counter <= avg_rating %}
+                        <i class="fas fa-star"></i>
+                        {% else %}
+                        <i class="far fa-star"></i>
+                        {% endif %}
+                    {% endfor %}
+                    ({{ reviews|length }}件)
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-body">
+                {% if review_form %}
+                <form method="post" action="{% url 'add_review' spot.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ review_form.rating.id_for_label }}" class="form-label">評価</label>
+                        {{ review_form.rating }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ review_form.comment.id_for_label }}" class="form-label">コメント</label>
+                        {{ review_form.comment }}
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>レビューを投稿
+                    </button>
+                </form>
+                <hr>
+                {% elif user.is_authenticated %}
+                <div class="alert alert-info">
+                    このスポットには既にレビューを投稿済みです。
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    レビューを投稿するには<a href="{% url 'login' %}">ログイン</a>が必要です。
+                </div>
+                {% endif %}
+
+                {% if reviews %}
+                {% for review in reviews %}
+                <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ review.user.username }}</strong>
+                            <div class="rating">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= review.rating %}
+                                    <i class="fas fa-star"></i>
+                                    {% else %}
+                                    <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ review.created_at|date:"Y年m月d日" }}</small>
+                    </div>
+                    <p class="mt-2">{{ review.comment|linebreaks }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">まだレビューがありません。</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- 地図表示エリア -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-map me-2"></i>位置情報</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="spotMap" style="height: 300px; width: 100%;"></div>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    緯度: {{ spot.latitude }}, 経度: {{ spot.longitude }}
+                </small>
+            </div>
+        </div>
+
+        <!-- 関連スポット（同じユーザーの投稿） -->
+        {% if spot.created_by.spot_set.all|length > 1 %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-user me-2"></i>{{ spot.created_by.username }}さんの他の投稿</h5>
+            </div>
+            <div class="card-body">
+                {% for related_spot in spot.created_by.spot_set.all %}
+                    {% if related_spot.id != spot.id %}
+                    <div class="mb-2">
+                        <a href="{% url 'spot_detail' related_spot.id %}" class="text-decoration-none">
+                            {{ related_spot.title }}
+                        </a>
+                        <br>
+                        <small class="text-muted">{{ related_spot.created_at|date:"Y年m月d日" }}</small>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'home' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>一覧に戻る
+    </a>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // スポット詳細マップを初期化
+    const spotMap = L.map('spotMap').setView([{{ spot.latitude }}, {{ spot.longitude }}], 15);
+    
+    // OpenStreetMapタイルレイヤーを追加
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(spotMap);
+    
+    // スポットマーカーを追加
+    L.marker([{{ spot.latitude }}, {{ spot.longitude }}])
+        .addTo(spotMap)
+        .bindPopup(`
+            <div class="popup-content">
+                <h6>{{ spot.title }}</h6>
+                <p>{{ spot.description|truncatewords:10 }}</p>
+            </div>
+        `)
+        .openPopup();
+});
+</script>
+{% endblock %}

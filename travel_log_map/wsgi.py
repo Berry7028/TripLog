@@ -1,5 +1,5 @@
 """
-WSGI config for triplog project.
+WSGI config for travel_log_map project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'triplog.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'travel_log_map.settings')
 
 application = get_wsgi_application()

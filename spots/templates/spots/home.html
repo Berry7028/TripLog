@@ -1,0 +1,91 @@
+{% extends 'spots/base.html' %}
+
+{% block title %}ホーム - 旅ログマップ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="section-title">いちらん</h2>
+
+        {% if search_query %}
+        <div class="alert alert-info">
+            <i class="fas fa-search me-2"></i>「{{ search_query }}」の検索結果: {{ page_obj.paginator.count }}件
+        </div>
+        {% endif %}
+
+        {% if page_obj %}
+        <div class="row">
+            {% for spot in page_obj %}
+            <div class="col-12 col-sm-6 col-md-4 mb-4">
+                <div class="card h-100 spot-card">
+                    {% if spot.image %}
+                    <img src="{{ spot.image.url }}" class="card-img-top" alt="{{ spot.title }}">
+                    {% else %}
+                    <div class="card-img-top image-placeholder d-flex align-items-center justify-content-center">
+                        <i class="fas fa-image fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+
+                    <div class="spot-info d-flex flex-column">
+                        <h5 class="spot-title">{{ spot.title }}</h5>
+                        <p class="spot-desc mb-2">{{ spot.description|truncatechars:70 }}</p>
+                        <div class="mt-auto d-flex align-items-center justify-content-between">
+                            {% if spot.address %}
+                            <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>{{ spot.address }}</small>
+                            {% endif %}
+                            <a href="{% url 'spot_detail' spot.id %}" class="btn btn-detail">詳細</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- ページネーション -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="ページネーション">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">最初</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">前へ</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">次へ</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">最後</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-map-marked-alt fa-5x text-muted mb-3"></i>
+            <h3>まだスポットが投稿されていません</h3>
+            <p class="text-muted">最初のスポットを投稿してみませんか？</p>
+            {% if user.is_authenticated %}
+            <a href="{% url 'add_spot' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>スポットを投稿する
+            </a>
+            {% else %}
+            <a href="{% url 'register' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>新規登録してスポットを投稿
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
