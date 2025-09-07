@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.db.models import Q, Avg
@@ -207,6 +207,17 @@ def spots_api(request):
         })
     
     return JsonResponse({'spots': spots_data})
+
+
+def logout_view(request):
+    """ログアウト（GET許可）してリダイレクト"""
+    logout(request)
+    try:
+        from django.conf import settings
+        next_url = getattr(settings, 'LOGOUT_REDIRECT_URL', '/') or '/'
+    except Exception:
+        next_url = '/'
+    return redirect(next_url)
 
 
 @login_required
