@@ -4,7 +4,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.db.models import Q, Avg
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotAllowed
 from django.core.paginator import Paginator
 from .models import Spot, Review, UserProfile
 from .forms import SpotForm, ReviewForm, UserProfileForm
@@ -82,22 +82,34 @@ def add_spot(request):
 def add_review(request, spot_id):
     """レビュー投稿"""
     spot = get_object_or_404(Spot, id=spot_id)
-    
-    if request.method == 'POST':
-        form = ReviewForm(request.POST)
-        if form.is_valid():
-            # 既存のレビューをチェック
-            existing_review = Review.objects.filter(spot=spot, user=request.user).first()
-            if existing_review:
-                messages.error(request, 'このスポットには既にレビューを投稿しています。')
-            else:
-                review = form.save(commit=False)
-                review.spot = spot
-                review.user = request.user
-                review.save()
-                messages.success(request, 'レビューを投稿しました！')
-    
-    return redirect('spot_detail', spot_id=spot_id)
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
+
+    form = ReviewForm(request.POST)
+    if form.is_valid():
+        # 既存のレビューをチェック
+        existing_review = Review.objects.filter(spot=spot, user=request.user).first()
+        if existing_review:
+            messages.error(request, 'このスポットには既にレビューを投稿しています。')
+        else:
+            review = form.save(commit=False)
+            review.spot = spot
+            review.user = request.user
+            review.save()
+            messages.success(request, 'レビューを投稿しました！')
+        return redirect('spot_detail', spot_id=spot_id)
+
+    # フォームが無効な場合、詳細ページを再表示
+    reviews = spot.reviews.all().select_related('user')
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+
+    context = {
+        'spot': spot,
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'review_form': form,
+    }
+    return render(request, 'spots/spot_detail.html', context)
 
 
 @login_required
