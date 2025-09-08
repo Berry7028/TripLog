@@ -4,7 +4,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.db.models import Q, Avg
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseNotAllowed
 from django.core.paginator import Paginator
 from .models import Spot, Review, UserProfile
 from .forms import SpotForm, ReviewForm, UserProfileForm
@@ -210,7 +210,9 @@ def spots_api(request):
 
 
 def logout_view(request):
-    """ログアウト（GET許可）してリダイレクト"""
+    """ログアウトをPOSTのみ許可してリダイレクト"""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
     logout(request)
     try:
         from django.conf import settings
