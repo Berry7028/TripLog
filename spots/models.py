@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -11,7 +11,7 @@ class Spot(models.Model):
     longitude = models.FloatField(verbose_name='経度')
     address = models.CharField(max_length=300, verbose_name='住所', blank=True)
     image = models.ImageField(upload_to='spot_images/', verbose_name='画像', blank=True, null=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='投稿者')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='投稿者')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
     
@@ -27,7 +27,7 @@ class Spot(models.Model):
 class Review(models.Model):
     """スポットのレビューモデル"""
     spot = models.ForeignKey(Spot, on_delete=models.CASCADE, related_name='reviews', verbose_name='スポット')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='レビュー者')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='レビュー者')
     rating = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
         verbose_name='評価'
@@ -47,7 +47,7 @@ class Review(models.Model):
 
 class UserProfile(models.Model):
     """ユーザープロフィールの拡張モデル"""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='ユーザー')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='ユーザー')
     bio = models.TextField(max_length=500, blank=True, verbose_name='自己紹介')
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name='アバター')
     favorite_spots = models.ManyToManyField(Spot, blank=True, verbose_name='お気に入りスポット')
