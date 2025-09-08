@@ -39,7 +39,9 @@ class Review(models.Model):
         verbose_name = 'レビュー'
         verbose_name_plural = 'レビュー'
         ordering = ['-created_at']
-        unique_together = ['spot', 'user']  # 1つのスポットに対して1ユーザー1レビュー
+        constraints = [
+            models.UniqueConstraint(fields=['spot', 'user'], name='unique_review_per_spot_user')
+        ]
     
     def __str__(self):
         return f'{self.spot.title} - {self.user.username} ({self.rating}★)'
