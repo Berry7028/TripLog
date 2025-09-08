@@ -67,6 +67,10 @@ body { background: var(--page-cream); }
   overflow: hidden;
   background: #f8f9fa;
   box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  /* Make the card a column flex container so the info area
+     can stretch to the bottom even when the address is short */
+  display: flex;
+  flex-direction: column;
 }
 .spot-card .card-img-top,
 .spot-card .image-placeholder {
@@ -77,6 +81,9 @@ body { background: var(--page-cream); }
 .spot-card .spot-info {
   background: var(--light-gray);
   padding: 18px 18px 14px;
+  /* Ensure the info area fills leftover height so the background
+     color remains consistent regardless of content length */
+  flex: 1 1 auto;
 }
 .spot-title { font-size: 1.25rem; margin-bottom: .25rem; }
 .spot-desc { color: #222; line-height: 1.4; }
