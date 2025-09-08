@@ -40,9 +40,12 @@ def spot_detail(request, spot_id):
     """スポット詳細ページ"""
     spot = get_object_or_404(Spot, id=spot_id)
     reviews = spot.reviews.all().select_related('user')
-    
+
     # 平均評価を計算
     avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+
+    # 同じユーザーが投稿した他のスポットを取得
+    other_spots = spot.created_by.spot_set.exclude(id=spot.id)
     
     # レビューフォーム
     review_form = None
@@ -57,6 +60,7 @@ def spot_detail(request, spot_id):
         'reviews': reviews,
         'avg_rating': avg_rating,
         'review_form': review_form,
+        'other_spots': other_spots,
     }
     return render(request, 'spots/spot_detail.html', context)
 

@@ -130,22 +130,20 @@
         </div>
 
         <!-- 関連スポット（同じユーザーの投稿） -->
-        {% if spot.created_by.spot_set.all|length > 1 %}
+        {% if other_spots %}
         <div class="card mt-4">
             <div class="card-header">
                 <h5><i class="fas fa-user me-2"></i>{{ spot.created_by.username }}さんの他の投稿</h5>
             </div>
             <div class="card-body">
-                {% for related_spot in spot.created_by.spot_set.all %}
-                    {% if related_spot.id != spot.id %}
-                    <div class="mb-2">
-                        <a href="{% url 'spot_detail' related_spot.id %}" class="text-decoration-none">
-                            {{ related_spot.title }}
-                        </a>
-                        <br>
-                        <small class="text-muted">{{ related_spot.created_at|date:"Y年m月d日" }}</small>
-                    </div>
-                    {% endif %}
+                {% for related_spot in other_spots %}
+                <div class="mb-2">
+                    <a href="{% url 'spot_detail' related_spot.id %}" class="text-decoration-none">
+                        {{ related_spot.title }}
+                    </a>
+                    <br>
+                    <small class="text-muted">{{ related_spot.created_at|date:"Y年m月d日" }}</small>
+                </div>
                 {% endfor %}
             </div>
         </div>
