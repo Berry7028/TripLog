@@ -95,8 +95,22 @@ body { background: var(--page-cream); }
   border-radius: 9999px;
   padding: .4rem 1rem;
   font-size: .95rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn-detail:hover { filter: brightness(0.95); }
+
+.spot-card .spot-info small.text-muted {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 
 /* Footer */
 .footer { background: var(--footer-deep); color: #fff; }
