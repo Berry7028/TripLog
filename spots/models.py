@@ -7,8 +7,14 @@ class Spot(models.Model):
     """旅行スポットのモデル"""
     title = models.CharField(max_length=200, verbose_name='スポット名')
     description = models.TextField(verbose_name='説明')
-    latitude = models.FloatField(verbose_name='緯度')
-    longitude = models.FloatField(verbose_name='経度')
+    latitude = models.FloatField(
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        verbose_name='緯度'
+    )
+    longitude = models.FloatField(
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        verbose_name='経度'
+    )
     address = models.CharField(max_length=300, verbose_name='住所', blank=True)
     image = models.ImageField(upload_to='spot_images/', verbose_name='画像', blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='投稿者')
