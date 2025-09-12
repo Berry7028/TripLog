@@ -191,6 +191,12 @@ def map_view(request):
 def spots_api(request):
     """スポット一覧API"""
     spots = Spot.objects.all().select_related('created_by')
+    filter_mode = (request.GET.get('filter') or '').lower()
+    if request.user.is_authenticated and filter_mode in ('mine', 'others'):
+        if filter_mode == 'mine':
+            spots = spots.filter(created_by=request.user)
+        elif filter_mode == 'others':
+            spots = spots.exclude(created_by=request.user)
     
     spots_data = []
     for spot in spots:
