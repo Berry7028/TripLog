@@ -52,11 +52,21 @@ def spot_detail(request, spot_id):
         if not existing_review:
             review_form = ReviewForm()
     
+    # お気に入り状態を判定
+    is_favorite = False
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            is_favorite = profile.favorite_spots.filter(id=spot.id).exists()
+        except UserProfile.DoesNotExist:
+            is_favorite = False
+
     context = {
         'spot': spot,
         'reviews': reviews,
         'avg_rating': avg_rating,
         'review_form': review_form,
+        'is_favorite': is_favorite,
     }
     return render(request, 'spots/spot_detail.html', context)
 
@@ -275,3 +285,18 @@ def add_spot_api(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です。'})
+
+
+@login_required
+def toggle_favorite(request, spot_id):
+    """スポットのお気に入りをトグル"""
+    spot = get_object_or_404(Spot, id=spot_id)
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        if profile.favorite_spots.filter(id=spot.id).exists():
+            profile.favorite_spots.remove(spot)
+            messages.info(request, 'お気に入りを解除しました。')
+        else:
+            profile.favorite_spots.add(spot)
+            messages.success(request, 'お気に入りに追加しました！')
+    return redirect('spot_detail', spot_id=spot.id)
