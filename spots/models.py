@@ -85,3 +85,20 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f'{self.user.username}のプロフィール'
+
+
+class SpotView(models.Model):
+    """スポットの詳細ページ閲覧ログ（直近期間のランキング集計に利用）"""
+    spot = models.ForeignKey(Spot, on_delete=models.CASCADE, related_name='spot_views', verbose_name='スポット')
+    viewed_at = models.DateTimeField(auto_now_add=True, verbose_name='閲覧日時')
+
+    class Meta:
+        verbose_name = 'スポット閲覧ログ'
+        verbose_name_plural = 'スポット閲覧ログ'
+        indexes = [
+            models.Index(fields=['viewed_at']),
+            models.Index(fields=['spot', 'viewed_at']),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.spot.title} @ {self.viewed_at}'
