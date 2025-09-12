@@ -4,7 +4,17 @@ from .models import Spot, Review, UserProfile
 
 class SpotForm(forms.ModelForm):
     """スポット投稿フォーム"""
-    
+    # カンマ区切りでタグを入力（任意）
+    tags_text = forms.CharField(
+        required=False,
+        label='タグ',
+        help_text='カンマ区切りで入力（例: 海, 山, 絶景）',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '例: 海, 山, 絶景'
+        })
+    )
+
     class Meta:
         model = Spot
         fields = ['title', 'description', 'latitude', 'longitude', 'address', 'image']
@@ -75,4 +85,3 @@ class UserProfileForm(forms.ModelForm):
                 'accept': 'image/*'
             }),
         }
-

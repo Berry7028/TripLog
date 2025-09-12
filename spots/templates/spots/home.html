@@ -29,6 +29,13 @@
                     <div class="spot-info d-flex flex-column">
                         <h5 class="spot-title">{{ spot.title }}</h5>
                         <p class="spot-desc mb-2">{{ spot.description|truncatechars:70 }}</p>
+                        {% if spot.tags.all %}
+                        <div class="mb-2">
+                            {% for tag in spot.tags.all %}
+                                <span class="badge bg-light text-dark border me-1">#{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         <div class="mt-auto d-flex align-items-center justify-content-between">
                             {% if spot.address %}
                             <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i>{{ spot.address }}</small>

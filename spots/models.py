@@ -3,6 +3,19 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+class Tag(models.Model):
+    """スポットに付与するタグ"""
+    name = models.CharField(max_length=50, unique=True, verbose_name='タグ名')
+
+    class Meta:
+        verbose_name = 'タグ'
+        verbose_name_plural = 'タグ'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Spot(models.Model):
     """旅行スポットのモデル"""
     title = models.CharField(max_length=200, verbose_name='スポット名')
@@ -14,6 +27,7 @@ class Spot(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='投稿者')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='spots', verbose_name='タグ')
     
     class Meta:
         verbose_name = 'スポット'

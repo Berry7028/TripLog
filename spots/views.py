@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.db.models import Q, Avg
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from .models import Spot, Review, UserProfile
+from .models import Spot, Review, UserProfile, Tag
 from .forms import SpotForm, ReviewForm, UserProfileForm
 
 
@@ -21,8 +21,10 @@ def home(request):
         spots = spots.filter(
             Q(title__icontains=search_query) |
             Q(description__icontains=search_query) |
-            Q(address__icontains=search_query)
+            Q(address__icontains=search_query) |
+            Q(tags__name__icontains=search_query)
         )
+        spots = spots.distinct()
     
     # ページネーション
     paginator = Paginator(spots, 12)  # 1ページに12件表示
@@ -80,6 +82,14 @@ def add_spot(request):
             spot = form.save(commit=False)
             spot.created_by = request.user
             spot.save()
+            # タグ処理（カンマ区切り）
+            tags_text = form.cleaned_data.get('tags_text') or ''
+            tag_objs = []
+            for raw in [t.strip() for t in tags_text.split(',') if t.strip()]:
+                tag, _ = Tag.objects.get_or_create(name=raw)
+                tag_objs.append(tag)
+            if tag_objs:
+                spot.tags.set(tag_objs)
             messages.success(request, 'スポットを投稿しました！')
             return redirect('spot_detail', spot_id=spot.id)
     else:
@@ -170,8 +180,9 @@ def search_spots_api(request):
         spots = Spot.objects.filter(
             Q(title__icontains=query) |
             Q(description__icontains=query) |
-            Q(address__icontains=query)
-        )[:10]  # 最大10件
+            Q(address__icontains=query) |
+            Q(tags__name__icontains=query)
+        ).distinct()[:10]  # 最大10件
         
         results = []
         for spot in spots:
@@ -220,6 +231,7 @@ def spots_api(request):
             'image': spot.image.url if spot.image else None,
             'created_by': spot.created_by.username,
             'created_at': spot.created_at.isoformat(),
+            'tags': [t.name for t in spot.tags.all()],
         })
     
     return JsonResponse({'spots': spots_data})
