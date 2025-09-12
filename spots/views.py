@@ -228,7 +228,7 @@ def spots_api(request):
             'latitude': spot.latitude,
             'longitude': spot.longitude,
             'address': spot.address,
-            'image': spot.image.url if spot.image else None,
+            'image': (spot.image.url if spot.image else (spot.image_url or None)),
             'created_by': spot.created_by.username,
             'created_at': spot.created_at.isoformat(),
             'tags': [t.name for t in spot.tags.all()],
@@ -260,6 +260,7 @@ def add_spot_api(request):
             longitude = float(request.POST.get('longitude'))
             address = request.POST.get('address', '')
             image = request.FILES.get('image')
+            image_url = (request.POST.get('image_url') or '').strip()
             
             # バリデーション
             if not title or not description:
@@ -273,6 +274,7 @@ def add_spot_api(request):
                 longitude=longitude,
                 address=address,
                 image=image,
+                image_url=image_url or None,
                 created_by=request.user
             )
             
@@ -284,7 +286,7 @@ def add_spot_api(request):
                 'latitude': spot.latitude,
                 'longitude': spot.longitude,
                 'address': spot.address,
-                'image': spot.image.url if spot.image else None,
+                'image': (spot.image.url if spot.image else (spot.image_url or None)),
                 'created_by': spot.created_by.username,
                 'created_at': spot.created_at.isoformat(),
             }

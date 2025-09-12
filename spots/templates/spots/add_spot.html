@@ -84,12 +84,22 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="{{ form.image.id_for_label }}" class="form-label">画像</label>
+                        <label for="{{ form.image.id_for_label }}" class="form-label">画像（アップロード）</label>
                         {{ form.image }}
                         {% if form.image.errors %}
                         <div class="text-danger">{{ form.image.errors }}</div>
                         {% endif %}
-                        <div class="form-text">JPEGまたはPNG形式の画像をアップロードできます。</div>
+                        <div class="form-text">JPEG/PNG などの画像をアップロード、または下の「画像URL」を入力してください（どちらかでOK）。</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.image_url.id_for_label }}" class="form-label">画像URL（任意）</label>
+                        {{ form.image_url }}
+                        {% if form.image_url.errors %}
+                        <div class="text-danger">{{ form.image_url.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">例: https://example.com/path/to/photo.jpg</div>
+                        <img id="image-url-preview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" alt="URLプレビュー">
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -133,6 +143,24 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             reader.readAsDataURL(file);
         });
+    }
+
+    // 画像URLプレビュー
+    const imageUrlInput = document.getElementById('id_image_url');
+    const imageUrlPreview = document.getElementById('image-url-preview');
+    if (imageUrlInput && imageUrlPreview) {
+        const updateUrlPreview = () => {
+            const url = (imageUrlInput.value || '').trim();
+            if (url) {
+                imageUrlPreview.src = url;
+                imageUrlPreview.style.display = 'block';
+            } else {
+                imageUrlPreview.removeAttribute('src');
+                imageUrlPreview.style.display = 'none';
+            }
+        };
+        imageUrlInput.addEventListener('input', updateUrlPreview);
+        updateUrlPreview();
     }
 
     // --- 地図で位置選択 ---

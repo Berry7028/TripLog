@@ -24,6 +24,7 @@ class Spot(models.Model):
     longitude = models.FloatField(verbose_name='経度')
     address = models.CharField(max_length=300, verbose_name='住所', blank=True)
     image = models.ImageField(upload_to='spot_images/', verbose_name='画像', blank=True, null=True)
+    image_url = models.URLField(blank=True, null=True, verbose_name='画像URL')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='投稿者')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
@@ -37,6 +38,17 @@ class Spot(models.Model):
     
     def __str__(self):
         return self.title
+
+    @property
+    def image_src(self) -> str:
+        """アップロード画像のURLがあれば優先し、なければ外部の画像URLを返す"""
+        if self.image:
+            try:
+                return self.image.url
+            except Exception:
+                # 画像が未設定の場合、Djangoはurlアクセスで例外を投げることがある
+                pass
+        return self.image_url or ''
 
 
 class Review(models.Model):

@@ -18,8 +18,8 @@
             {% for spot in page_obj %}
             <div class="col-12 col-sm-6 col-md-4 mb-4">
                 <div class="card h-100 spot-card">
-                    {% if spot.image %}
-                    <img src="{{ spot.image.url }}" class="card-img-top" alt="{{ spot.title }}">
+                    {% if spot.image_src %}
+                    <img src="{{ spot.image_src }}" class="card-img-top" alt="{{ spot.title }}">
                     {% else %}
                     <div class="card-img-top image-placeholder d-flex align-items-center justify-content-center">
                         <i class="fas fa-image fa-3x text-muted"></i>

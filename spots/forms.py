@@ -17,7 +17,7 @@ class SpotForm(forms.ModelForm):
 
     class Meta:
         model = Spot
-        fields = ['title', 'description', 'latitude', 'longitude', 'address', 'image']
+        fields = ['title', 'description', 'latitude', 'longitude', 'address', 'image', 'image_url']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -45,6 +45,10 @@ class SpotForm(forms.ModelForm):
             'image': forms.FileInput(attrs={
                 'class': 'form-control',
                 'accept': 'image/*'
+            }),
+            'image_url': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://example.com/image.jpg'
             }),
         }
 
