@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Spot, Review, UserProfile
+from .models import Spot, Review, UserProfile, Tag
 
 
 @admin.register(Spot)
@@ -8,6 +8,7 @@ class SpotAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'created_by']
     search_fields = ['title', 'description', 'address']
     readonly_fields = ['created_at', 'updated_at']
+    filter_horizontal = ['tags']
     
     fieldsets = (
         ('基本情報', {
@@ -18,6 +19,9 @@ class SpotAdmin(admin.ModelAdmin):
         }),
         ('画像', {
             'fields': ('image',)
+        }),
+        ('タグ', {
+            'fields': ('tags',),
         }),
         ('日時情報', {
             'fields': ('created_at', 'updated_at'),
@@ -39,3 +43,9 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'bio']
     search_fields = ['user__username', 'bio']
     filter_horizontal = ['favorite_spots']
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
