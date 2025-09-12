@@ -28,6 +28,7 @@ class Spot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
     tags = models.ManyToManyField(Tag, blank=True, related_name='spots', verbose_name='タグ')
+    is_ai_generated = models.BooleanField(default=False, verbose_name='AI生成')
     
     class Meta:
         verbose_name = 'スポット'
