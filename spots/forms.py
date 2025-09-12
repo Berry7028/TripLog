@@ -48,6 +48,12 @@ class SpotForm(forms.ModelForm):
             }),
         }
 
+def clean_tags_text(self):
+    tags_text = self.cleaned_data.get('tags_text', '')
+    for tag in [t.strip() for t in tags_text.split(',') if t.strip()]:
+        if len(tag) > 50:
+            raise forms.ValidationError('タグは50文字以内で入力してください。')
+    return tags_text
 
 class ReviewForm(forms.ModelForm):
     """レビュー投稿フォーム"""
