@@ -3,10 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Count
+from django.utils import timezone
+from datetime import timedelta
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from .models import Spot, Review, UserProfile, Tag
+from .models import Spot, Review, UserProfile, Tag, SpotView
 from .forms import SpotForm, ReviewForm, UserProfileForm
 
 
@@ -41,6 +43,13 @@ def home(request):
 def spot_detail(request, spot_id):
     """スポット詳細ページ"""
     spot = get_object_or_404(Spot, id=spot_id)
+    # 閲覧ログを記録（GETアクセス時）
+    if request.method == 'GET':
+        try:
+            SpotView.objects.create(spot=spot)
+        except Exception:
+            # ログ記録は失敗しても画面表示を継続
+            pass
     reviews = spot.reviews.all().select_related('user')
     
     # 平均評価を計算
@@ -71,6 +80,25 @@ def spot_detail(request, spot_id):
         'is_favorite': is_favorite,
     }
     return render(request, 'spots/spot_detail.html', context)
+
+
+def ranking(request):
+    """直近7日間の閲覧数ランキング"""
+    week_ago = timezone.now() - timedelta(days=7)
+    # 直近7日の閲覧数で集計し、上位順にソート
+    ranked_spots = (
+        Spot.objects.all()
+        .annotate(weekly_views=Count('spot_views', filter=Q(spot_views__viewed_at__gte=week_ago)))
+        .filter(weekly_views__gt=0)
+        .select_related('created_by')
+        .prefetch_related('tags')
+        .order_by('-weekly_views', '-created_at')
+    )
+    context = {
+        'ranked_spots': ranked_spots[:7],  # トップ7のみ表示
+        'week_ago': week_ago,
+    }
+    return render(request, 'spots/ranking.html', context)
 
 
 @login_required
