@@ -18,7 +18,7 @@ class SpotAdmin(admin.ModelAdmin):
             'fields': ('latitude', 'longitude', 'address')
         }),
         ('画像', {
-            'fields': ('image',)
+            'fields': ('image', 'image_url')
         }),
         ('タグ', {
             'fields': ('tags',),
