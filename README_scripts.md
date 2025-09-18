@@ -10,7 +10,9 @@ TripLog/
 └── scripts/
     ├── start_server.sh   # 通常起動スクリプト
     ├── dev_start.sh      # フルセットアップスクリプト
-    └── ai_generate_spots.sh # AIスポット生成スクリプト
+    ├── ai_generate_spots.sh # AIスポット生成スクリプト
+    └── flow/
+        └── generate_flow.py # 画面フロー図の生成
 ```
 
 ## 🚀 使用方法
@@ -71,6 +73,43 @@ TripLog/
 - LM Studioが起動している
 - OpenAI互換APIが有効化されている
 - モデル（デフォルト: qwen/qwen3-4b-2507）がロードされている
+
+### フローチャート生成 (Mermaid 推奨)
+
+実際のUIをクロールして画面フロー図を Mermaid(.mmd) として生成します。Mermaid CLI (`mmdc`) があれば SVG/PNG も出力します。Graphviz DOT での出力にも切替可能です。
+
+```bash
+# 開発サーバーを起動した状態で実行
+# MMD + SVG を生成 (出力: scripts/flow/out/app_flow.mmd / .svg)
+python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/
+
+# PNG で生成
+python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/ --format png
+
+# 出力先/ファイル名を変更
+python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/ --outdir scripts/flow/out --filename my_flow
+
+# パスのフィルタリング (例: /admin, /static, /media を除外 ← デフォルト)
+python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/ --exclude "^/(admin|static|media)"
+
+# クロール上限と include 条件
+python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/ --max-pages 80 --include "^/(spots|accounts)"
+```
+
+Mermaid CLI が未インストールの場合は `.mmd` のみ出力されます。インストール例:
+
+```bash
+npm i -g @mermaid-js/mermaid-cli
+```
+
+Graphviz を使いたい場合（DOT + SVG）:
+
+```bash
+python scripts/flow/generate_flow.py --engine dot --base-url http://127.0.0.1:8000/
+brew install graphviz
+```
+
+デフォルトの内容は `build_default_flow()` を編集することで変更できます。
 
 ## 📍 アクセス先
 
