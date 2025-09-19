@@ -1,86 +1,119 @@
-# Django開発サーバー起動スクリプト
+# 開発用スクリプトガイド
 
-このプロジェクトには、Django開発サーバーを簡単に起動するためのスクリプトが含まれています。
+TripLog プロジェクトの開発フローをまとめて支援するスクリプト群について解説します。最新のエントリーポイントは `scripts/devhub/devhub.sh` で、プロジェクトの現在状況を表示しながら各種サブスクリプトを起動できます。
 
-## 📁 スクリプト構造
+## 📁 スクリプト構成
 
 ```
 TripLog/
-├── start.sh              # メイン起動スクリプト（選択機能付き）
+├── start.sh                  # devhub へのエイリアス
 └── scripts/
-    ├── start_server.sh   # 通常起動スクリプト
-    ├── dev_start.sh      # フルセットアップスクリプト
-    ├── ai_generate_spots.sh # AIスポット生成スクリプト
+    ├── devhub/
+    │   └── devhub.sh         # 開発ハブ (情報表示 + 各種スクリプト呼び出し)
+    ├── start_server.sh       # 既存環境でサーバーを起動
+    ├── dev_start.sh          # 仮想環境構築からサーバー起動まで
+    ├── ai_generate_spots.sh  # AI を使ったスポットデータ生成
     └── flow/
-        └── generate_flow.py # 画面フロー図の生成
+        └── generate_flow.py  # 画面フロー図を生成
 ```
 
-## 🚀 使用方法
+## 🚀 推奨の使い方
 
-### メインスクリプト（推奨）
+### 対話的な開発ハブを起動する
+
 ```bash
-./start.sh
+./start.sh            # または ./scripts/devhub/devhub.sh menu
 ```
 
-このスクリプトを実行すると、以下の選択肢が表示されます：
+`devhub.sh` は起動時に以下の情報をまとめて表示します。
 
-1. **🚀 通常起動** - 仮想環境が既に作成済みの場合
-2. **🔧 開発セットアップ** - 初回セットアップや環境を一から構築したい場合
-3. **🤖 AIスポット生成** - AIが観光スポットを自動生成（LM Studioが必要）
-4. **❌ 終了**
+- Git ブランチと変更状況
+- venv/ の Python バージョンと pip バージョン
+- Django のバージョンおよびマイグレーション計画 (`showmigrations --plan`)
+- 呼び出し可能なサブスクリプト一覧
 
-### 直接実行（上級者向け）
+メニューで選択できる内容:
 
-#### 通常起動
+1. 情報の再表示
+2. 開発セットアップ (`dev_start.sh`)
+3. サーバー起動 (`start_server.sh`)
+4. AI スポット生成 (`ai_generate_spots.sh`)
+5. 画面フロー図生成 (`flow/generate_flow.py`)
+0. 終了
+
+### CLI から直接コマンドを指定する
+
+`devhub.sh` はメニュー表示以外にも CLI サブコマンドを受け付けます。
+
+```bash
+# プロジェクト状況だけ確認
+./scripts/devhub/devhub.sh info
+
+# 初期セットアップを実行
+./scripts/devhub/devhub.sh setup
+
+# 画面フロー図を別のベース URL で生成
+./scripts/devhub/devhub.sh flow http://example.com/
+```
+
+利用可能なサブコマンド:
+
+| コマンド | 説明 |
+| --- | --- |
+| `menu` | 対話型メニューを開く (デフォルト) |
+| `info` | Git / Python / Django / スクリプトの状況を表示 |
+| `setup` | `scripts/dev_start.sh` を実行 |
+| `start` | `scripts/start_server.sh` を実行 |
+| `ai` | `scripts/ai_generate_spots.sh` を実行 |
+| `flow [URL]` | `flow/generate_flow.py` を実行 (URL 省略時は `http://127.0.0.1:8000/`) |
+
+## 🔧 直接サブスクリプトを使いたい場合
+
+### 通常起動 (既存環境でサーバーを立ち上げ)
 ```bash
 ./scripts/start_server.sh
 ```
-
-**機能:**
+**機能**
 - 仮想環境の有効化
-- Djangoのインストール確認
-- データベースマイグレーションの実行
+- Django のインストール確認
+- 必要に応じたデータベースマイグレーション
 - 開発サーバーの起動
 
-#### フルセットアップ
+### フルセットアップ (初回推奨)
 ```bash
 ./scripts/dev_start.sh
 ```
-
-**機能:**
-- Pythonバージョンの確認
-- 仮想環境の作成（存在しない場合）
-- pipのアップグレード
-- requirements.txtからの依存関係インストール
-- Djangoのインストール確認
+**機能**
+- Python バージョンの確認
+- 仮想環境の作成 (必要な場合)
+- pip のアップグレード
+- requirements.txt のインストール
+- Django のインストール確認
 - データベースマイグレーション
-- 静的ファイルの収集
+- 静的ファイル収集
 - 開発サーバーの起動
 
-#### AIスポット生成
+### AI スポット生成
 ```bash
 ./scripts/ai_generate_spots.sh
 ```
+**機能**
+- LM Studio の接続確認
+- 生成スポット数の選択 (5/10/20/カスタム)
+- AI による観光スポット自動生成
+- マイグレーションと開発サーバーの起動
 
-**機能:**
-- LM Studioの接続確認
-- 生成スポット数の選択（5/10/20/カスタム）
-- AIによる観光スポットの自動生成
-- データベースマイグレーション
-- 開発サーバーの起動
+**前提条件**
+- LM Studio が起動している
+- OpenAI 互換 API が有効化されている
+- モデル (デフォルト: `qwen/qwen3-4b-2507`) がロードされている
 
-**前提条件:**
-- LM Studioが起動している
-- OpenAI互換APIが有効化されている
-- モデル（デフォルト: qwen/qwen3-4b-2507）がロードされている
+## 🗺️ 画面フロー図生成 (Mermaid 推奨)
 
-### フローチャート生成 (Mermaid 推奨)
-
-実際のUIをクロールして画面フロー図を Mermaid(.mmd) として生成します。Mermaid CLI (`mmdc`) があれば SVG/PNG も出力します。Graphviz DOT での出力にも切替可能です。
+`generate_flow.py` は開発サーバーをクロールし、Mermaid(.mmd) として画面フロー図を生成します。Mermaid CLI (`mmdc`) があれば SVG/PNG も出力できます。Graphviz DOT での出力にも切り替え可能です。
 
 ```bash
 # 開発サーバーを起動した状態で実行
-# MMD + SVG を生成 (出力: scripts/flow/out/app_flow.mmd / .svg)
 python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/
 
 # PNG で生成
@@ -102,42 +135,32 @@ Mermaid CLI が未インストールの場合は `.mmd` のみ出力されます
 npm i -g @mermaid-js/mermaid-cli
 ```
 
-Graphviz を使いたい場合（DOT + SVG）:
+Graphviz を使いたい場合 (DOT + SVG):
 
 ```bash
 python scripts/flow/generate_flow.py --engine dot --base-url http://127.0.0.1:8000/
 brew install graphviz
 ```
 
-デフォルトの内容は `build_default_flow()` を編集することで変更できます。
+デフォルトのクロール条件は `build_default_flow()` を編集することで変更できます。
 
 ## 📍 アクセス先
 
 - **メインサイト:** http://127.0.0.1:8000/
 - **管理画面:** http://127.0.0.1:8000/admin/
 
-## 🚀 クイックスタート
-
-```bash
-./start.sh
-```
-
-実行後、状況に応じて選択肢を選んでください：
-- **初回の場合:** 2を選択（開発セットアップ）
-- **2回目以降:** 1を選択（通常起動）
-- **AIスポット生成:** 3を選択（LM Studioが必要）
-
 ## ⚠️ 注意事項
 
-- スクリプトを実行する前に、プロジェクトのルートディレクトリにいることを確認してください
-- 初回実行時は開発セットアップモード（選択肢2）を使用することを推奨します
-- サーバーを停止するには `Ctrl+C` を押してください
+- スクリプトはプロジェクトのルートディレクトリから実行してください。
+- 初回セットアップ時はメニューの「開発セットアップ」または `setup` コマンドを推奨します。
+- サーバーを停止するには `Ctrl+C` を押してください。
 
 ## 🔧 トラブルシューティング
 
 ### 権限エラーが発生する場合
 ```bash
 chmod +x start.sh
+chmod +x scripts/devhub/devhub.sh
 chmod +x scripts/start_server.sh
 chmod +x scripts/dev_start.sh
 chmod +x scripts/ai_generate_spots.sh
@@ -150,36 +173,25 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Djangoがインストールされていない場合
+### Django がインストールされていない場合
 ```bash
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### LM Studioの設定（AIスポット生成用）
+### LM Studio の設定 (AI スポット生成用)
 
-AIスポット生成機能を使用するには、LM Studioの設定が必要です：
-
-1. **LM Studioのインストール**
-   - [LM Studio](https://lmstudio.ai/)をダウンロード・インストール
-
-2. **モデルのダウンロード**
-   - LM Studioで「qwen/qwen3-4b-2507」モデルをダウンロード
-   - または他のモデルを使用する場合は環境変数を設定
-
-3. **Local Serverの起動**
-   - LM Studioで「Local Server」タブを開く
-   - ポート1234でサーバーを起動
-   - OpenAI互換APIを有効化
-
-4. **環境変数の設定（オプション）**
+1. **LM Studio のインストール**: [LM Studio](https://lmstudio.ai/) をダウンロード・インストール
+2. **モデルのダウンロード**: 「qwen/qwen3-4b-2507」などをロード
+3. **Local Server の起動**: ポート 1234 / OpenAI 互換 API を有効化
+4. **環境変数 (任意)**
    ```bash
    export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
    export LMSTUDIO_MODEL="qwen/qwen3-4b-2507"
    ```
-
-5. **AIスポット生成の実行**
+5. **AI スポット生成を実行**
    ```bash
-   ./start.sh
-   # 選択肢3を選択
+   ./scripts/devhub/devhub.sh ai
+   # または ./start.sh → メニューから「AIスポット生成」
    ```
+
