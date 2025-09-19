@@ -147,6 +147,7 @@ show_script_summary() {
     print_script_status "start_server.sh" "既存環境でのサーバー起動"
     print_script_status "ai_generate_spots.sh" "AIによるスポットデータ生成"
     print_script_status "flow/generate_flow.py" "画面フロー図の生成"
+    print_script_status "run_tests.sh" "Djangoテストスイートの実行"
 }
 
 show_overview() {
@@ -192,6 +193,25 @@ run_flow_generator() {
     (cd "$ROOT_DIR" && "$python_cmd" "$SCRIPTS_DIR/flow/generate_flow.py" --base-url "$base_url")
 }
 
+run_tests() {
+    print_header "Djangoテストスイートを実行します"
+    if ! run_manage_py test "$@"; then
+        print_error "テストの実行に失敗しました"
+        return 1
+    fi
+}
+
+run_tests_interactive() {
+    local input
+    read -r -p "manage.py test に渡す追加引数 (空欄で全テスト): " input
+    if [ -z "$input" ]; then
+        run_tests
+    else
+        IFS=' ' read -r -a extra_args <<< "$input"
+        run_tests "${extra_args[@]}"
+    fi
+}
+
 # =========================
 # メニュー / CLI
 # =========================
@@ -206,6 +226,7 @@ show_menu() {
   3) サーバー起動 (start_server.sh)
   4) AIスポット生成 (ai_generate_spots.sh)
   5) 画面フロー図生成 (flow/generate_flow.py)
+  6) テスト実行 (manage.py test)
   0) 終了
 MENU
         read -r -p "番号を入力 > " choice
@@ -225,12 +246,15 @@ MENU
             5)
                 run_flow_generator
                 ;;
+            6)
+                run_tests_interactive
+                ;;
             0)
                 print_info "終了します"
                 break
                 ;;
             *)
-                print_warning "0〜5の番号を入力してください"
+                print_warning "0〜6の番号を入力してください"
                 ;;
         esac
     done
@@ -247,6 +271,7 @@ command:
   start       start_server.sh を実行
   ai          ai_generate_spots.sh を実行
   flow [URL]  フロー図を生成 (URL省略時は http://127.0.0.1:8000/)
+  test [ARGS] manage.py test を実行 (ARGS は任意指定)
   help        このメッセージを表示
 USAGE
 }
@@ -279,6 +304,9 @@ run_cli() {
             fi
             print_header "画面フロー図を生成します"
             (cd "$ROOT_DIR" && "$python_cmd" "$SCRIPTS_DIR/flow/generate_flow.py" --base-url "$url")
+            ;;
+        test)
+            run_tests "$@"
             ;;
         help|--help|-h)
             usage
