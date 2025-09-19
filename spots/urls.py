@@ -16,4 +16,5 @@ urlpatterns = [
     path('map/', views.map_view, name='map'),
     path('api/spots/', views.spots_api, name='spots_api'),
     path('api/spots/add/', views.add_spot_api, name='add_spot_api'),
+    path('plan/', views.plan_view, name='plan'),
 ]

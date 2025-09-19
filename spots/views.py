@@ -342,3 +342,8 @@ def toggle_favorite(request, spot_id):
             profile.favorite_spots.add(spot)
             messages.success(request, 'お気に入りに追加しました！')
     return redirect('spot_detail', spot_id=spot.id)
+
+
+def plan_view(request):
+    """プランページ - iframeで外部サイトを表示"""
+    return render(request, 'spots/plan.html')
