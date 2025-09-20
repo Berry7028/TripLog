@@ -1,13 +1,10 @@
 #!/bin/bash
-
 set -e
 
-ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DEVHUB_SCRIPT="$ROOT_DIR/scripts/devhub/devhub.sh"
+# Production start script for Render.com
+# Run database migrations
+python manage.py collectstatic --no-input
+python manage.py migrate
 
-if [ -x "$DEVHUB_SCRIPT" ]; then
-    exec "$DEVHUB_SCRIPT" "$@"
-fi
-
-echo "❌ scripts/devhub/devhub.sh が見つかりません。リポジトリが最新か確認してください。"
-exit 1
+# Start the Django application with Gunicorn
+exec gunicorn travel_log_map.wsgi:application --bind 0.0.0.0:$PORT
