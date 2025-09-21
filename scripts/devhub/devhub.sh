@@ -227,6 +227,7 @@ show_menu() {
   4) AIスポット生成 (ai_generate_spots.sh)
   5) 画面フロー図生成 (flow/generate_flow.py)
   6) テスト実行 (manage.py test)
+  7) requirements.txt インストール (pip install -r requirements.txt)
   0) 終了
 MENU
         read -r -p "番号を入力 > " choice
@@ -248,6 +249,10 @@ MENU
                 ;;
             6)
                 run_tests_interactive
+                ;;
+            7)
+                pip install -r requirements.txt
+                print_info "requirements.txt がインストールされました"
                 ;;
             0)
                 print_info "終了します"
@@ -272,6 +277,7 @@ command:
   ai          ai_generate_spots.sh を実行
   flow [URL]  フロー図を生成 (URL省略時は http://127.0.0.1:8000/)
   test [ARGS] manage.py test を実行 (ARGS は任意指定)
+  install_requirements requirements.txt をインストール
   help        このメッセージを表示
 USAGE
 }
