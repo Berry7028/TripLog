@@ -42,6 +42,10 @@ INSTALLED_APPS = [
     'spots',
 ]
 
+# Add whitenoise.runserver_nostatic for production to disable Django's static file serving
+if not DEBUG:
+    INSTALLED_APPS.insert(0, 'whitenoise.runserver_nostatic')
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -125,9 +129,18 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Static files configuration
+STATICFILES_DIRS = [
+    BASE_DIR / 'spots' / 'static',
+]
+
 # Use whitenoise storage only in production
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    
+    # WhiteNoise configuration for production
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
