@@ -56,3 +56,4 @@ npm-debug.log*
 .env.production
 
 scripts/flow/out/
+ui_flow.txt
