@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIガイドライン - TripLog</title>
+    <meta name="description" content="TripLogアプリケーションのUIデザインガイドライン">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&display=swap" rel="stylesheet">
+    <style>
+        .font-mochiy { font-family: 'Mochiy Pop P One', cursive; }
+        .brand-gradient { background: linear-gradient(135deg, #568F87, #064232); }
+        .color-swatch {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-right: 1rem;
+            border: 3px solid white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .component-demo {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 min-h-screen">
+    <!-- ナビゲーションバー -->
+    <nav class="brand-gradient text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-palette text-xl"></i>
+                    <h1 class="font-mochiy text-xl font-bold">UIガイドライン</h1>
+                </div>
+                <a href="index.html" class="bg-white text-teal-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-home mr-2"></i>ホーム
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- メインコンテンツ -->
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- ヘッダー -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+            <h1 class="font-mochiy text-4xl font-bold text-gray-800 mb-4">TripLog UI ガイドライン</h1>
+            <p class="text-lg text-gray-600 mb-6">
+                統一されたデザインシステムで、一貫性のあるユーザー体験を提供します。
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="text-center p-4 bg-teal-50 rounded-lg">
+                    <i class="fas fa-palette text-2xl text-teal-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800">カラーパレット</h3>
+                    <p class="text-sm text-gray-600">ブランドカラーの定義</p>
+                </div>
+                <div class="text-center p-4 bg-pink-50 rounded-lg">
+                    <i class="fas fa-font text-2xl text-pink-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800">タイポグラフィ</h3>
+                    <p class="text-sm text-gray-600">フォントシステム</p>
+                </div>
+                <div class="text-center p-4 bg-purple-50 rounded-lg">
+                    <i class="fas fa-shapes text-2xl text-purple-600 mb-2"></i>
+                    <h3 class="font-semibold text-gray-800">コンポーネント</h3>
+                    <p class="text-sm text-gray-600">UIコンポーネント</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- カラーパレット -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+            <h2 class="font-mochiy text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-palette mr-3 text-teal-600"></i>
+                カラーパレット
+            </h2>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="color-swatch bg-teal-600"></div>
+                    <h3 class="font-semibold text-gray-800 mt-3 mb-2">Primary Teal</h3>
+                    <p class="text-sm text-gray-600 mb-2">#568F87</p>
+                    <p class="text-xs text-gray-500">ナビゲーション、ボタン、リンク</p>
+                </div>
+
+                <div class="text-center">
+                    <div class="color-swatch bg-teal-800"></div>
+                    <h3 class="font-semibold text-gray-800 mt-3 mb-2">Primary Dark</h3>
+                    <p class="text-sm text-gray-600 mb-2">#064232</p>
+                    <p class="text-xs text-gray-500">フッター、ホバー時</p>
+                </div>
+
+                <div class="text-center">
+                    <div class="color-swatch bg-pink-300"></div>
+                    <h3 class="font-semibold text-gray-800 mt-3 mb-2">Accent Pink</h3>
+                    <p class="text-sm text-gray-600 mb-2">#F5BABB</p>
+                    <p class="text-xs text-gray-500">アクション、ハイライト</p>
+                </div>
+
+                <div class="text-center">
+                    <div class="color-swatch bg-orange-100"></div>
+                    <h3 class="font-semibold text-gray-800 mt-3 mb-2">Background</h3>
+                    <p class="text-sm text-gray-600 mb-2">#FFF5F2</p>
+                    <p class="text-xs text-gray-500">ページ背景、カード背景</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- タイポグラフィ -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+            <h2 class="font-mochiy text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-font mr-3 text-teal-600"></i>
+                タイポグラフィ
+            </h2>
+
+            <div class="space-y-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">メインフォント: Mochiy Pop P One</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg mb-4">
+                        <p class="font-mochiy text-2xl text-gray-800">旅ログマップ TripLog</p>
+                    </div>
+                    <p class="text-gray-600 mb-2">使用箇所: ヘッダー、ブランディング、主要タイトル</p>
+                    <p class="text-sm text-gray-500">font-family: 'Mochiy Pop P One', cursive</p>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">本文フォント: システムフォント</h3>
+                    <div class="bg-gray-50 p-6 rounded-lg mb-4">
+                        <p class="text-gray-800 leading-relaxed">
+                            これは本文テキストの例です。システムフォントを使用することで、
+                            各プラットフォームでの最適な読みやすさを提供します。
+                        </p>
+                    </div>
+                    <p class="text-gray-600 mb-2">使用箇所: 本文、説明文、ラベル、ボタンテキスト</p>
+                    <p class="text-sm text-gray-500">font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans JP', sans-serif</p>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">フォントサイズスケール</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">text-4xl</div>
+                            <div class="font-mochiy text-4xl text-gray-800">大見出し</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">text-2xl</div>
+                            <div class="font-mochiy text-2xl text-gray-800">中見出し</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">text-xl</div>
+                            <div class="font-mochiy text-xl text-gray-800">小見出し</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">text-base</div>
+                            <div class="text-gray-800">本文テキスト</div>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-16 text-sm text-gray-500">text-sm</div>
+                            <div class="text-gray-600">補助テキスト</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- コンポーネント -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+            <h2 class="font-mochiy text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-shapes mr-3 text-teal-600"></i>
+                UIコンポーネント
+            </h2>
+
+            <div class="space-y-12">
+                <!-- ボタン -->
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">ボタン</h3>
+
+                    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="component-demo text-center">
+                            <button class="bg-teal-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-teal-700 transition-colors">
+                                プライマリーボタン
+                            </button>
+                            <p class="text-sm text-gray-500 mt-3">主要アクションに使用</p>
+                        </div>
+
+                        <div class="component-demo text-center">
+                            <button class="bg-pink-300 text-teal-800 px-6 py-3 rounded-full font-semibold hover:bg-pink-400 transition-colors">
+                                アクセントボタン
+                            </button>
+                            <p class="text-sm text-gray-500 mt-3">強調アクションに使用</p>
+                        </div>
+
+                        <div class="component-demo text-center">
+                            <button class="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-full font-semibold hover:bg-gray-50 transition-colors">
+                                アウトラインボタン
+                            </button>
+                            <p class="text-sm text-gray-500 mt-3">副次アクションに使用</p>
+                        </div>
+
+                        <div class="component-demo text-center">
+                            <button class="bg-gray-100 text-gray-600 px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition-colors">
+                                無効ボタン
+                            </button>
+                            <p class="text-sm text-gray-500 mt-3">無効状態のボタン</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- カード -->
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">カード</h3>
+
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="component-demo">
+                            <div class="bg-gray-50 rounded-2xl overflow-hidden">
+                                <div class="h-32 bg-gradient-to-br from-teal-400 to-teal-600"></div>
+                                <div class="p-4">
+                                    <h4 class="font-semibold text-gray-800 mb-2">スポットカード</h4>
+                                    <p class="text-sm text-gray-600 mb-3">スポットの情報を表示するカード</p>
+                                    <button class="bg-pink-300 text-teal-800 px-4 py-2 rounded-full text-sm font-semibold">
+                                        詳細を見る
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="component-demo">
+                            <div class="bg-white border border-gray-200 rounded-2xl p-6">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mr-4">
+                                        <i class="fas fa-map text-teal-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-800">機能カード</h4>
+                                        <p class="text-sm text-gray-600">アイコン付きカード</p>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-600">各機能の説明を記載</p>
+                            </div>
+                        </div>
+
+                        <div class="component-demo">
+                            <div class="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-200 rounded-2xl p-6">
+                                <h4 class="font-mochiy text-lg font-bold text-gray-800 mb-3">ガラスエフェクト</h4>
+                                <p class="text-sm text-gray-600 mb-4">背景にぼかし効果を適用</p>
+                                <div class="bg-white/30 backdrop-blur-sm rounded-lg p-3">
+                                    <p class="text-sm text-gray-700">半透明のコンテンツ</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- フォーム要素 -->
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-6">フォーム要素</h3>
+
+                    <div class="component-demo">
+                        <div class="max-w-md space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">スポット名</label>
+                                <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="スポット名を入力">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">説明</label>
+                                <textarea rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="スポットの説明を入力"></textarea>
+                            </div>
+
+                            <div class="flex items-center">
+                                <input type="checkbox" id="favorite" class="w-4 h-4 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500">
+                                <label for="favorite" class="ml-2 text-sm text-gray-700">お気に入りに追加</label>
+                            </div>
+
+                            <button class="w-full bg-teal-600 text-white py-3 rounded-xl font-semibold hover:bg-teal-700 transition-colors">
+                                送信する
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- レイアウトパターン -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+            <h2 class="font-mochiy text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-th-large mr-3 text-teal-600"></i>
+                レイアウトパターン
+            </h2>
+
+            <div class="space-y-8">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">グリッドシステム</h3>
+                    <div class="component-demo">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="bg-teal-100 p-4 rounded-lg text-center">列1</div>
+                            <div class="bg-pink-100 p-4 rounded-lg text-center">列2</div>
+                            <div class="bg-purple-100 p-4 rounded-lg text-center">列3</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">フレックスレイアウト</h3>
+                    <div class="component-demo">
+                        <div class="flex flex-col md:flex-row items-center justify-between bg-gray-50 p-6 rounded-lg">
+                            <div class="flex items-center mb-4 md:mb-0">
+                                <div class="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center mr-4">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">ユーザー情報</h4>
+                                    <p class="text-sm text-gray-600">プロフィール詳細</p>
+                                </div>
+                            </div>
+                            <button class="bg-teal-600 text-white px-6 py-2 rounded-full font-semibold">
+                                編集
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- レスポンシブデザイン -->
+        <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+            <h2 class="font-mochiy text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-mobile-alt mr-3 text-teal-600"></i>
+                レスポンシブデザイン
+            </h2>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">ブレークポイント</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div class="p-3 bg-white rounded">
+                                <div class="text-sm font-semibold text-gray-800">sm</div>
+                                <div class="text-xs text-gray-600">640px+</div>
+                            </div>
+                            <div class="p-3 bg-white rounded">
+                                <div class="text-sm font-semibold text-gray-800">md</div>
+                                <div class="text-xs text-gray-600">768px+</div>
+                            </div>
+                            <div class="p-3 bg-white rounded">
+                                <div class="text-sm font-semibold text-gray-800">lg</div>
+                                <div class="text-xs text-gray-600">1024px+</div>
+                            </div>
+                            <div class="p-3 bg-white rounded">
+                                <div class="text-sm font-semibold text-gray-800">xl</div>
+                                <div class="text-xs text-gray-600">1280px+</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">モバイル対応</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            タッチフレンドリーなボタンサイズ（最小44px）
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            読みやすいフォントサイズ
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            適切な余白とパディング
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            縦積みレイアウトでの最適化
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- アクセシビリティ -->
+        <div class="bg-white rounded-2xl shadow-sm p-8">
+            <h2 class="font-mochiy text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-universal-access mr-3 text-teal-600"></i>
+                アクセシビリティ
+            </h2>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">カラコントラスト</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <span class="text-gray-800">テキスト / 背景</span>
+                            <span class="font-semibold text-green-600">✓ AA準拠</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <span class="text-gray-800">ボタン / 背景</span>
+                            <span class="font-semibold text-green-600">✓ AA準拠</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <span class="text-gray-800">リンク / テキスト</span>
+                            <span class="font-semibold text-green-600">✓ AA準拠</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">キーボードナビゲーション</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            Tabキーでのフォーカス移動
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            Enter/Spaceでのアクション実行
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            フォーカスインジケーターの表示
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-3 mt-1"></i>
+                            スキップリンクの設置
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // カラースウォッチのクリックでコピー
+        document.querySelectorAll('.color-swatch').forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                const color = swatch.style.backgroundColor;
+                navigator.clipboard.writeText(rgbToHex(color));
+
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                notification.textContent = '色コードをコピーしました';
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 2000);
+            });
+        });
+
+        function rgbToHex(rgb) {
+            const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (!match) return rgb;
+
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+    </script>
+</body>
+</html>
