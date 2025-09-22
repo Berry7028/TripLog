@@ -1,11 +1,13 @@
+import tempfile
+from unittest.mock import MagicMock, patch
+
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
-import tempfile
-
 from .models import Spot, Tag
+from .services import ExternalSpotService, LocalSpotService, SpotServiceError, get_spot_service
 
 
 class SpotImageSrcTests(TestCase):
@@ -103,3 +105,160 @@ class SpotsApiTests(TestCase):
         data = response.json()
         returned_ids = {spot['id'] for spot in data['spots']}
         self.assertSetEqual(returned_ids, {self.owned_spot.id, self.other_spot.id})
+
+
+class SpotServiceFactoryTests(TestCase):
+    def test_get_spot_service_returns_local_by_default(self):
+        service = get_spot_service()
+        self.assertIsInstance(service, LocalSpotService)
+
+    @override_settings(SPOT_API_CONFIG={'USE_EXTERNAL': True, 'BASE_URL': 'https://api.example.com'})
+    def test_get_spot_service_returns_external_when_enabled(self):
+        service = get_spot_service()
+        self.assertIsInstance(service, ExternalSpotService)
+
+
+class ExternalSpotServiceTests(TestCase):
+    def setUp(self):
+        self.session = MagicMock()
+        self.response = MagicMock()
+        self.response.status_code = 200
+        self.session.request.return_value = self.response
+        self.service = ExternalSpotService(
+            'https://api.example.com',
+            session=self.session,
+            endpoints={'search': '/search/', 'list': '/spots/', 'create': '/spots/add/'},
+        )
+
+    def test_search_spots_calls_external_api(self):
+        self.response.json.return_value = {'results': [{'id': 1, 'title': '海'}]}
+
+        results = self.service.search_spots(query='海', request=None)
+
+        self.session.request.assert_called_once_with(
+            'GET',
+            'https://api.example.com/search/',
+            headers={},
+            params={'q': '海'},
+            timeout=5.0,
+        )
+        self.assertEqual(results, [{'id': 1, 'title': '海'}])
+
+    def test_search_spots_raises_on_error_status(self):
+        self.response.status_code = 500
+        self.response.json.return_value = {'error': 'boom'}
+
+        with self.assertRaises(SpotServiceError) as ctx:
+            self.service.search_spots(query='海', request=None)
+
+        self.assertEqual(ctx.exception.status_code, 500)
+
+    def test_create_spot_sends_payload_and_returns_spot(self):
+        self.response.json.return_value = {'success': True, 'spot': {'id': 99, 'title': '新スポット'}}
+
+        upload = SimpleUploadedFile('sample.jpg', b'data', content_type='image/jpeg')
+        request = type('Req', (), {
+            'POST': {
+                'title': '新スポット',
+                'description': '説明',
+                'latitude': '35.0',
+                'longitude': '139.0',
+                'address': '東京',
+                'image_url': '',
+            },
+            'FILES': {'image': upload},
+        })()
+
+        spot = self.service.create_spot(request=request)
+
+        self.assertEqual(spot['id'], 99)
+        args, kwargs = self.session.request.call_args
+        self.assertEqual(args[0], 'POST')
+        self.assertEqual(args[1], 'https://api.example.com/spots/add/')
+        self.assertIn('files', kwargs)
+        self.assertIn('image', kwargs['files'])
+        self.assertEqual(kwargs['data']['title'], '新スポット')
+
+    def test_create_spot_raises_when_api_reports_failure(self):
+        self.response.json.return_value = {'success': False, 'error': 'invalid'}
+
+        request = type('Req', (), {'POST': {'title': 't', 'description': 'd'}, 'FILES': {}})()
+
+        with self.assertRaises(SpotServiceError) as ctx:
+            self.service.create_spot(request=request)
+
+        self.assertEqual(ctx.exception.status_code, 502)
+
+
+class SpotApiServiceDelegationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='carol', password='carolpass123')
+
+    def test_search_spots_api_uses_service(self):
+        fake_service = MagicMock()
+        fake_service.search_spots.return_value = [{'id': 1}]
+        with patch('spots.views.get_spot_service', return_value=fake_service):
+            response = self.client.get(reverse('search_spots_api'), {'q': '東京'})
+
+        fake_service.search_spots.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'results': [{'id': 1}]})
+
+    def test_search_spots_api_handles_service_error(self):
+        fake_service = MagicMock()
+        fake_service.search_spots.side_effect = SpotServiceError('NG', status_code=502)
+        with patch('spots.views.get_spot_service', return_value=fake_service):
+            response = self.client.get(reverse('search_spots_api'), {'q': '東京'})
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.json(), {'results': [], 'error': 'NG'})
+
+    def test_spots_api_uses_service(self):
+        fake_service = MagicMock()
+        fake_service.list_spots.return_value = [{'id': 1, 'title': '東京'}]
+        with patch('spots.views.get_spot_service', return_value=fake_service):
+            response = self.client.get(reverse('spots_api'), {'filter': 'mine'})
+
+        fake_service.list_spots.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'spots': [{'id': 1, 'title': '東京'}]})
+
+    def test_spots_api_handles_service_error(self):
+        fake_service = MagicMock()
+        fake_service.list_spots.side_effect = SpotServiceError('NG', status_code=503)
+        with patch('spots.views.get_spot_service', return_value=fake_service):
+            response = self.client.get(reverse('spots_api'))
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json(), {'spots': [], 'error': 'NG'})
+
+    def test_add_spot_api_uses_service(self):
+        self.client.force_login(self.user)
+        fake_service = MagicMock()
+        fake_service.create_spot.return_value = {'id': 10}
+        with patch('spots.views.get_spot_service', return_value=fake_service):
+            response = self.client.post(reverse('add_spot_api'), {
+                'title': '東京',
+                'description': '説明',
+                'latitude': '35.0',
+                'longitude': '139.0',
+            })
+
+        fake_service.create_spot.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'success': True, 'spot': {'id': 10}})
+
+    def test_add_spot_api_handles_service_error(self):
+        self.client.force_login(self.user)
+        fake_service = MagicMock()
+        fake_service.create_spot.side_effect = SpotServiceError('NG', status_code=400)
+        with patch('spots.views.get_spot_service', return_value=fake_service):
+            response = self.client.post(reverse('add_spot_api'), {
+                'title': '東京',
+                'description': '説明',
+                'latitude': '35.0',
+                'longitude': '139.0',
+            })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {'success': False, 'error': 'NG'})

@@ -163,3 +163,45 @@ CSRF_TRUSTED_ORIGINS = [
     'https://8001-ij3w7fliisck5f9nvstl9-41315974.manusvm.computer',
     'https://*.manusvm.computer',
 ]
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    """環境変数を真偽値として解釈するヘルパー。"""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.lower() in {'1', 'true', 't', 'yes', 'on'}
+
+
+def _env_float(name: str, default: float) -> float:
+    """環境変数を浮動小数点として解釈し、失敗したらデフォルト値を返す。"""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+_default_headers = {}
+_api_token = os.environ.get('SPOT_API_TOKEN')
+if _api_token:
+    header_name = os.environ.get('SPOT_API_TOKEN_HEADER', 'Authorization')
+    if header_name.lower() == 'authorization' and not _api_token.lower().startswith('bearer '):
+        _default_headers[header_name] = f'Bearer {_api_token}'
+    else:
+        _default_headers[header_name] = _api_token
+
+
+SPOT_API_CONFIG = {
+    'USE_EXTERNAL': _env_flag('SPOT_API_USE_EXTERNAL', False),
+    'BASE_URL': (os.environ.get('SPOT_API_BASE_URL') or '').rstrip('/'),
+    'TIMEOUT': _env_float('SPOT_API_TIMEOUT', 5.0),
+    'HEADERS': _default_headers,
+    'ENDPOINTS': {
+        'SEARCH': os.environ.get('SPOT_API_SEARCH_PATH', '/api/search/'),
+        'LIST': os.environ.get('SPOT_API_LIST_PATH', '/api/spots/'),
+        'CREATE': os.environ.get('SPOT_API_CREATE_PATH', '/api/spots/add/'),
+    },
+}

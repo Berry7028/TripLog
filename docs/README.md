@@ -69,6 +69,7 @@ VS CodeのLive Server拡張機能を使用して、`index.html`を開いてプ�
   - リクエスト/レスポンス形式
   - 認証方法
   - エラーハンドリング
+  - 外部スポットサービス連携ガイド（使い方）
   - 使用例（cURL）
 
 ### ui-guidelines.html

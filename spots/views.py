@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.core.paginator import Paginator
 from .models import Spot, Review, UserProfile, Tag, SpotView
 from .forms import SpotForm, ReviewForm, UserProfileForm
+from .services import get_spot_service, SpotServiceError
 
 
 def home(request):
@@ -204,27 +205,13 @@ def register(request):
 def search_spots_api(request):
     """スポット検索API（Ajax用）"""
     query = request.GET.get('q', '')
-    if query:
-        spots = Spot.objects.filter(
-            Q(title__icontains=query) |
-            Q(description__icontains=query) |
-            Q(address__icontains=query) |
-            Q(tags__name__icontains=query)
-        ).distinct()[:10]  # 最大10件
-        
-        results = []
-        for spot in spots:
-            results.append({
-                'id': spot.id,
-                'title': spot.title,
-                'address': spot.address,
-                'latitude': spot.latitude,
-                'longitude': spot.longitude,
-            })
-        
-        return JsonResponse({'results': results})
-    
-    return JsonResponse({'results': []})
+    service = get_spot_service()
+    try:
+        results = service.search_spots(query=query, request=request)
+    except SpotServiceError as exc:
+        return JsonResponse({'results': [], 'error': str(exc)}, status=exc.status_code)
+
+    return JsonResponse({'results': results})
 
 
 def map_view(request):
@@ -239,29 +226,13 @@ def map_view(request):
 
 def spots_api(request):
     """スポット一覧API"""
-    spots = Spot.objects.all().select_related('created_by')
     filter_mode = (request.GET.get('filter') or '').lower()
-    if request.user.is_authenticated and filter_mode in ('mine', 'others'):
-        if filter_mode == 'mine':
-            spots = spots.filter(created_by=request.user)
-        elif filter_mode == 'others':
-            spots = spots.exclude(created_by=request.user)
-    
-    spots_data = []
-    for spot in spots:
-        spots_data.append({
-            'id': spot.id,
-            'title': spot.title,
-            'description': spot.description,
-            'latitude': spot.latitude,
-            'longitude': spot.longitude,
-            'address': spot.address,
-            'image': (spot.image.url if spot.image else (spot.image_url or None)),
-            'created_by': spot.created_by.username,
-            'created_at': spot.created_at.isoformat(),
-            'tags': [t.name for t in spot.tags.all()],
-        })
-    
+    service = get_spot_service()
+    try:
+        spots_data = service.list_spots(request=request, filter_mode=filter_mode)
+    except SpotServiceError as exc:
+        return JsonResponse({'spots': [], 'error': str(exc)}, status=exc.status_code)
+
     return JsonResponse({'spots': spots_data})
 
 
@@ -280,52 +251,14 @@ def logout_view(request):
 def add_spot_api(request):
     """スポット追加API"""
     if request.method == 'POST':
+        service = get_spot_service()
         try:
-            # フォームデータを取得
-            title = request.POST.get('title')
-            description = request.POST.get('description')
-            latitude = float(request.POST.get('latitude'))
-            longitude = float(request.POST.get('longitude'))
-            address = request.POST.get('address', '')
-            image = request.FILES.get('image')
-            image_url = (request.POST.get('image_url') or '').strip()
-            
-            # バリデーション
-            if not title or not description:
-                return JsonResponse({'success': False, 'error': 'タイトルと説明は必須です。'})
-            
-            # スポットを作成
-            spot = Spot.objects.create(
-                title=title,
-                description=description,
-                latitude=latitude,
-                longitude=longitude,
-                address=address,
-                image=image,
-                image_url=image_url or None,
-                created_by=request.user
-            )
-            
-            # レスポンスデータ
-            spot_data = {
-                'id': spot.id,
-                'title': spot.title,
-                'description': spot.description,
-                'latitude': spot.latitude,
-                'longitude': spot.longitude,
-                'address': spot.address,
-                'image': (spot.image.url if spot.image else (spot.image_url or None)),
-                'created_by': spot.created_by.username,
-                'created_at': spot.created_at.isoformat(),
-            }
-            
-            return JsonResponse({'success': True, 'spot': spot_data})
-            
-        except ValueError as e:
-            return JsonResponse({'success': False, 'error': '座標の形式が正しくありません。'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
+            spot_data = service.create_spot(request=request)
+        except SpotServiceError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=exc.status_code)
+
+        return JsonResponse({'success': True, 'spot': spot_data})
+
     return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です。'})
 
 
