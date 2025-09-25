@@ -1,4 +1,5 @@
 {% extends 'spots/base.html' %}
+{% load static %}
 
 {% block title %}{{ spot.title }} - 旅ログマップ{% endblock %}
 
@@ -14,24 +15,47 @@
             <div class="card-body">
                 <h1 class="card-title">{{ spot.title }}</h1>
                 <div class="mb-3">
-                    {% if user.is_authenticated %}
-                    <form method="post" action="{% url 'toggle_favorite' spot.id %}" class="d-inline">
-                        {% csrf_token %}
-                        {% if is_favorite %}
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-heart-broken me-1"></i>お気に入り解除
-                        </button>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if user.is_authenticated %}
+                        <form method="post" action="{% url 'toggle_favorite' spot.id %}" class="d-inline">
+                            {% csrf_token %}
+                            {% if is_favorite %}
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-heart-broken me-1"></i>お気に入り解除
+                            </button>
+                            {% else %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-heart me-1"></i>お気に入りに追加
+                            </button>
+                            {% endif %}
+                        </form>
                         {% else %}
-                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                            <i class="fas fa-heart me-1"></i>お気に入りに追加
-                        </button>
+                        <a class="btn btn-outline-danger btn-sm" href="{% url 'login' %}?next={% url 'spot_detail' spot.id %}">
+                            <i class="fas fa-heart me-1"></i>お気に入りに追加（ログイン）
+                        </a>
                         {% endif %}
-                    </form>
-                    {% else %}
-                    <a class="btn btn-outline-danger btn-sm" href="{% url 'login' %}?next={% url 'spot_detail' spot.id %}">
-                        <i class="fas fa-heart me-1"></i>お気に入りに追加（ログイン）
-                    </a>
-                    {% endif %}
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            id="shareButton"
+                            data-share-url="{{ share_url }}"
+                            data-share-title="{{ spot.title }}"
+                            data-share-text="{{ spot.description|truncatechars:120 }}"
+                            data-feedback-target="shareFeedback"
+                        >
+                            <i class="fas fa-share-alt me-1"></i>シェア
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-info btn-sm"
+                            id="copyUrlButton"
+                            data-copy-url="{{ share_url }}"
+                            data-feedback-target="shareFeedback"
+                        >
+                            <i class="fas fa-copy me-1"></i>URLコピー
+                        </button>
+                    </div>
+                    <div id="shareFeedback" class="alert d-none mt-3 mb-0" role="status"></div>
                 </div>
                 
                 <div class="mb-3">
@@ -193,9 +217,20 @@
 <!-- Leaflet CSS and JS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'spots/js/share.js' %}"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // シェアボタンの初期化
+    if (typeof initSpotShareButton === 'function') {
+        initSpotShareButton();
+    }
+
+    // URLコピーボタンの初期化
+    if (typeof initCopyUrlButton === 'function') {
+        initCopyUrlButton();
+    }
+
     // スポット詳細マップを初期化
     const spotMap = L.map('spotMap').setView([{{ spot.latitude }}, {{ spot.longitude }}], 15);
     
