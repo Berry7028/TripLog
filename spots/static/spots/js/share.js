@@ -46,11 +46,20 @@
         const feedbackId = shareButton.dataset.feedbackTarget;
         const feedbackEl = feedbackId ? document.getElementById(feedbackId) : null;
 
+        let isSharing = false;
+
         shareButton.addEventListener('click', async function () {
+            if (isSharing) {
+                return; // 共有処理中は無視
+            }
+
             if (!shareUrl) {
                 showFeedback(feedbackEl, '共有するURLを取得できませんでした。', 'error');
                 return;
             }
+
+            isSharing = true;
+            shareButton.disabled = true;
 
             try {
                 if (navigator.share) {
@@ -60,17 +69,53 @@
                         url: shareUrl,
                     });
                     showFeedback(feedbackEl, '共有メニューを開きました。', 'info');
-                    return;
+                } else {
+                    await copyToClipboard(shareUrl);
+                    showFeedback(feedbackEl, 'スポットのリンクをコピーしました！', 'success');
                 }
+            } catch (error) {
+                // AbortError（ユーザーがキャンセルした場合）はエラーとみなさない
+                if (error.name === 'AbortError') {
+                    showFeedback(feedbackEl, '共有がキャンセルされました。', 'info');
+                } else if (error.name === 'InvalidStateError') {
+                    // 共有状態の競合時は何も表示せず、静かに終了
+                    return;
+                } else {
+                    showFeedback(feedbackEl, '共有に失敗しました。お手数ですが手動でリンクをコピーしてください。', 'error');
+                }
+            } finally {
+                isSharing = false;
+                shareButton.disabled = false;
+            }
+        });
+    }
 
-                await copyToClipboard(shareUrl);
+    function initCopyUrlButton() {
+        const copyButton = document.getElementById('copyUrlButton');
+        if (!copyButton) {
+            return;
+        }
+
+        const copyUrl = copyButton.dataset.copyUrl || window.location.href;
+        const feedbackId = copyButton.dataset.feedbackTarget;
+        const feedbackEl = feedbackId ? document.getElementById(feedbackId) : null;
+
+        copyButton.addEventListener('click', async function () {
+            if (!copyUrl) {
+                showFeedback(feedbackEl, 'コピーするURLを取得できませんでした。', 'error');
+                return;
+            }
+
+            try {
+                await copyToClipboard(copyUrl);
                 showFeedback(feedbackEl, 'スポットのリンクをコピーしました！', 'success');
             } catch (error) {
-                showFeedback(feedbackEl, '共有に失敗しました。お手数ですが手動でリンクをコピーしてください。', 'error');
-                console.error('Failed to share spot link:', error);
+                showFeedback(feedbackEl, 'コピーに失敗しました。お手数ですが手動でリンクをコピーしてください。', 'error');
+                console.error('Failed to copy URL:', error);
             }
         });
     }
 
     window.initSpotShareButton = initSpotShareButton;
+    window.initCopyUrlButton = initCopyUrlButton;
 })(window, document);
