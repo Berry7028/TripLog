@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.urls import reverse
 
 
 class Tag(models.Model):
@@ -35,9 +36,13 @@ class Spot(models.Model):
         verbose_name = 'スポット'
         verbose_name_plural = 'スポット'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self) -> str:
+        """スポット詳細ページのURLを返す"""
+        return reverse('spot_detail', args=[self.id])
 
     @property
     def image_src(self) -> str:

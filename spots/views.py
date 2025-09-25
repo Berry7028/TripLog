@@ -51,10 +51,13 @@ def spot_detail(request, spot_id):
             # ログ記録は失敗しても画面表示を継続
             pass
     reviews = spot.reviews.all().select_related('user')
-    
+
     # 平均評価を計算
     avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
-    
+
+    # シェアURL（絶対URL）
+    share_url = request.build_absolute_uri(spot.get_absolute_url())
+
     # レビューフォーム
     review_form = None
     if request.user.is_authenticated:
@@ -78,6 +81,7 @@ def spot_detail(request, spot_id):
         'avg_rating': avg_rating,
         'review_form': review_form,
         'is_favorite': is_favorite,
+        'share_url': share_url,
     }
     return render(request, 'spots/spot_detail.html', context)
 
