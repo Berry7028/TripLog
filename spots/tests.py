@@ -233,7 +233,6 @@ class AdminUserUpdateTests(TestCase):
                 'username': 'target',
                 'email': 'new@example.com',
                 'is_active': 'on',
-                'is_staff': 'on',
                 'bio': '旅好き',
                 'favorite_spots': [str(self.spot.id)],
             },
@@ -241,7 +240,7 @@ class AdminUserUpdateTests(TestCase):
         self.assertEqual(response.status_code, 302)
         target = User.objects.get(pk=self.target.pk)
         self.assertEqual(target.email, 'new@example.com')
-        self.assertTrue(target.is_staff)
+        self.assertFalse(target.is_staff)
         profile = UserProfile.objects.get(user=target)
         self.assertEqual(profile.bio, '旅好き')
         self.assertSetEqual(set(profile.favorite_spots.values_list('id', flat=True)), {self.spot.id})
@@ -302,7 +301,7 @@ class AdminUserCreationTests(TestCase):
         self.group = Group.objects.create(name='Editors')
         self.permission = Permission.objects.first()
 
-    def test_staff_can_create_user_with_group(self):
+    def test_staff_creates_user_without_privileged_fields(self):
         self.client.force_login(self.staff)
         response = self.client.post(
             reverse('admin_user_add'),
@@ -312,17 +311,13 @@ class AdminUserCreationTests(TestCase):
                 'password1': 'Securepass123',
                 'password2': 'Securepass123',
                 'is_active': 'on',
-                'is_staff': 'on',
-                'groups': [str(self.group.id)],
-                'user_permissions': [str(self.permission.id)] if self.permission else [],
             },
         )
         self.assertEqual(response.status_code, 302)
         created = User.objects.get(username='newuser')
-        self.assertTrue(created.is_staff)
-        self.assertIn(self.group, created.groups.all())
-        if self.permission:
-            self.assertIn(self.permission, created.user_permissions.all())
+        self.assertFalse(created.is_staff)
+        self.assertFalse(created.groups.exists())
+        self.assertFalse(created.user_permissions.exists())
 
 
 class AdminUserPasswordChangeTests(TestCase):

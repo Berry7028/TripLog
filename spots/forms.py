@@ -207,6 +207,13 @@ class TagForm(forms.ModelForm):
 class UserAdminForm(forms.ModelForm):
     """ユーザー管理フォーム"""
 
+    privileged_fields = (
+        'is_staff',
+        'is_superuser',
+        'groups',
+        'user_permissions',
+    )
+
     class Meta:
         model = User
         fields = [
@@ -228,12 +235,17 @@ class UserAdminForm(forms.ModelForm):
             'user_permissions': forms.SelectMultiple(attrs={'class': 'form-select', 'size': 8}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, request_user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['groups'].queryset = Group.objects.order_by('name')
-        self.fields['groups'].label = '所属グループ'
-        self.fields['user_permissions'].queryset = Permission.objects.order_by('content_type__app_label', 'codename')
-        self.fields['user_permissions'].label = '個別パーミッション'
+        if request_user is not None and not request_user.is_superuser:
+            for field_name in self.privileged_fields:
+                self.fields.pop(field_name, None)
+        if 'groups' in self.fields:
+            self.fields['groups'].queryset = Group.objects.order_by('name')
+            self.fields['groups'].label = '所属グループ'
+        if 'user_permissions' in self.fields:
+            self.fields['user_permissions'].queryset = Permission.objects.order_by('content_type__app_label', 'codename')
+            self.fields['user_permissions'].label = '個別パーミッション'
 
 
 class UserProfileAdminForm(forms.ModelForm):
@@ -282,13 +294,18 @@ class UserAdminCreateForm(UserCreationForm):
             'user_permissions',
         )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, request_user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if request_user is not None and not request_user.is_superuser:
+            for field_name in UserAdminForm.privileged_fields:
+                self.fields.pop(field_name, None)
         self.fields['username'].widget.attrs.update({'class': 'form-control'})
         self.fields['password1'].widget.attrs.update({'class': 'form-control'})
         self.fields['password2'].widget.attrs.update({'class': 'form-control'})
-        self.fields['groups'].queryset = Group.objects.order_by('name')
-        self.fields['user_permissions'].queryset = Permission.objects.order_by('content_type__app_label', 'codename')
+        if 'groups' in self.fields:
+            self.fields['groups'].queryset = Group.objects.order_by('name')
+        if 'user_permissions' in self.fields:
+            self.fields['user_permissions'].queryset = Permission.objects.order_by('content_type__app_label', 'codename')
 
     def save(self, commit=True):
         user: User = super().save(commit=False)

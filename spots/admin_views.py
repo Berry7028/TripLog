@@ -401,6 +401,11 @@ class UserAdminCreateView(AdminPermissionRequiredMixin, CreateView):
     success_url = reverse_lazy('admin_user_list')
     required_permissions = ('auth.add_user',)
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['request_user'] = self.request.user
+        return kwargs
+
     def form_valid(self, form):
         messages.success(self.request, 'ユーザーを作成しました。')
         return super().form_valid(form)
@@ -429,7 +434,8 @@ class UserAdminDetailView(AdminPermissionRequiredMixin, TemplateView):
             {
                 'user_obj': self.user_obj,
                 'profile': profile,
-                'user_form': kwargs.get('user_form') or UserAdminForm(instance=self.user_obj),
+                'user_form': kwargs.get('user_form')
+                or UserAdminForm(instance=self.user_obj, request_user=self.request.user),
                 'profile_form': kwargs.get('profile_form')
                 or UserProfileAdminForm(instance=profile),
                 'recent_spots': self.user_obj.spot_set.select_related('created_by').order_by('-created_at')[:5],
@@ -441,7 +447,11 @@ class UserAdminDetailView(AdminPermissionRequiredMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         profile, _ = UserProfile.objects.get_or_create(user=self.user_obj)
-        user_form = UserAdminForm(request.POST, instance=self.user_obj)
+        user_form = UserAdminForm(
+            request.POST,
+            instance=self.user_obj,
+            request_user=request.user,
+        )
         profile_form = UserProfileAdminForm(request.POST, request.FILES, instance=profile)
         if user_form.is_valid() and profile_form.is_valid():
             user_form.save()
