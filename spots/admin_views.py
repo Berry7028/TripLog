@@ -47,6 +47,26 @@ class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return super().handle_no_permission()
 
 
+class AdminPermissionRequiredMixin(StaffRequiredMixin):
+    """スタッフの中でも特定の権限を要求するMixin"""
+
+    required_permissions: tuple[str, ...] = ()
+
+    def get_required_permissions(self) -> tuple[str, ...]:
+        return self.required_permissions
+
+    def test_func(self) -> bool:
+        if not super().test_func():
+            return False
+        user = self.request.user
+        if user.is_superuser:
+            return True
+        perms = self.get_required_permissions()
+        if not perms:
+            return True
+        return user.has_perms(perms)
+
+
 class AdminDashboardView(StaffRequiredMixin, TemplateView):
     """管理ダッシュボードトップ"""
 
@@ -332,12 +352,13 @@ class ReviewAdminDeleteView(StaffRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-class UserAdminListView(StaffRequiredMixin, ListView):
+class UserAdminListView(AdminPermissionRequiredMixin, ListView):
     template_name = 'spots/admin/user_list.html'
     model = User
     context_object_name = 'users'
     paginate_by = 25
     ordering = ['username']
+    required_permissions = ('auth.view_user',)
 
     def get_queryset(self):
         queryset = User.objects.all()
@@ -373,11 +394,12 @@ class UserAdminListView(StaffRequiredMixin, ListView):
         return context
 
 
-class UserAdminCreateView(StaffRequiredMixin, CreateView):
+class UserAdminCreateView(AdminPermissionRequiredMixin, CreateView):
     model = User
     form_class = UserAdminCreateForm
     template_name = 'spots/admin/user_form.html'
     success_url = reverse_lazy('admin_user_list')
+    required_permissions = ('auth.add_user',)
 
     def form_valid(self, form):
         messages.success(self.request, 'ユーザーを作成しました。')
@@ -388,8 +410,13 @@ class UserAdminCreateView(StaffRequiredMixin, CreateView):
         return super().form_invalid(form)
 
 
-class UserAdminDetailView(StaffRequiredMixin, TemplateView):
+class UserAdminDetailView(AdminPermissionRequiredMixin, TemplateView):
     template_name = 'spots/admin/user_detail.html'
+
+    def get_required_permissions(self) -> tuple[str, ...]:
+        if self.request.method.upper() == 'POST':
+            return ('auth.change_user',)
+        return ('auth.view_user',)
 
     def dispatch(self, request, *args, **kwargs):
         self.user_obj = get_object_or_404(User, pk=kwargs['pk'])
@@ -426,9 +453,10 @@ class UserAdminDetailView(StaffRequiredMixin, TemplateView):
         return self.render_to_response(context)
 
 
-class UserAdminPasswordChangeView(StaffRequiredMixin, FormView):
+class UserAdminPasswordChangeView(AdminPermissionRequiredMixin, FormView):
     template_name = 'spots/admin/user_password.html'
     form_class = AdminPasswordChangeForm
+    required_permissions = ('auth.change_user',)
 
     def dispatch(self, request, *args, **kwargs):
         self.user_obj = get_object_or_404(User, pk=kwargs['pk'])

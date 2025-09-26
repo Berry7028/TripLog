@@ -211,6 +211,8 @@ class AdminUserUpdateTests(TestCase):
         self.staff = User.objects.create_user(
             username='staffuser', password='staffpass123', is_staff=True
         )
+        perms = Permission.objects.filter(codename__in=['view_user', 'change_user'])
+        self.staff.user_permissions.add(*perms)
         self.target = User.objects.create_user(
             username='target', password='targetpass123', email='old@example.com'
         )
@@ -295,6 +297,8 @@ class AdminUserCreationTests(TestCase):
         self.staff = User.objects.create_user(
             username='adminstaff', password='staffpass123', is_staff=True
         )
+        perms = Permission.objects.filter(codename__in=['view_user', 'add_user'])
+        self.staff.user_permissions.add(*perms)
         self.group = Group.objects.create(name='Editors')
         self.permission = Permission.objects.first()
 
@@ -326,6 +330,8 @@ class AdminUserPasswordChangeTests(TestCase):
         self.staff = User.objects.create_user(
             username='superstaff', password='staffpass123', is_staff=True
         )
+        perms = Permission.objects.filter(codename__in=['view_user', 'change_user'])
+        self.staff.user_permissions.add(*perms)
         self.target = User.objects.create_user(username='member', password='oldpass123')
 
     def test_staff_can_change_password(self):
