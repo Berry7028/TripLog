@@ -1,0 +1,124 @@
+{% extends 'spots/admin/base_admin.html' %}
+
+{% block admin_title %} | スポット管理{% endblock %}
+
+{% block admin_header %}
+<div class="admin-header-row">
+    <div>
+        <h1 class="admin-title"><i class="fas fa-map-marker-alt me-2"></i>スポット管理</h1>
+        <p class="admin-subtitle">スポットの検索・編集・削除を行います。</p>
+    </div>
+    <div>
+        <a class="btn btn-primary" href="{% url 'admin_spot_add' %}"><i class="fas fa-plus me-1"></i>新規作成</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block admin_content %}
+<form method="get" class="admin-filter-form">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">キーワード</label>
+            <input type="search" name="q" value="{{ search_query }}" class="form-control" placeholder="タイトル・説明・住所・タグ">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">タグ</label>
+            <select name="tag" class="form-select">
+                <option value="">すべて</option>
+                {% for tag in tags %}
+                <option value="{{ tag.id }}" {% if selected_tag == tag.id|stringformat:'s' %}selected{% endif %}>{{ tag.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">投稿者</label>
+            <select name="creator" class="form-select">
+                <option value="">すべて</option>
+                {% for creator in creators %}
+                <option value="{{ creator.id }}" {% if selected_creator == creator.id|stringformat:'s' %}selected{% endif %}>{{ creator.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">AI生成</label>
+            <select name="ai" class="form-select">
+                <option value="">すべて</option>
+                <option value="1" {% if selected_ai == '1' %}selected{% endif %}>AIのみ</option>
+                <option value="0" {% if selected_ai == '0' %}selected{% endif %}>AI以外</option>
+            </select>
+        </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-secondary" type="submit"><i class="fas fa-filter me-1"></i>絞り込み</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_spot_list' %}"><i class="fas fa-undo me-1"></i>リセット</a>
+    </div>
+</form>
+
+<div class="table-responsive mt-4">
+    <table class="table table-striped align-middle admin-table">
+        <thead>
+            <tr>
+                <th>スポット名</th>
+                <th>投稿者</th>
+                <th>AI</th>
+                <th>タグ</th>
+                <th class="text-end">レビュー</th>
+                <th class="text-end">直近7日閲覧</th>
+                <th>作成日</th>
+                <th class="text-end">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for spot in spots %}
+            <tr>
+                <td>
+                    <div class="fw-bold">{{ spot.title }}</div>
+                    <div class="text-muted small">{{ spot.address|default:'住所未登録' }}</div>
+                </td>
+                <td>{{ spot.created_by.username }}</td>
+                <td>
+                    {% if spot.is_ai_generated %}
+                    <span class="admin-badge admin-badge--ai"><i class="fas fa-robot"></i>AI</span>
+                    {% else %}
+                    <span class="admin-badge admin-badge--manual"><i class="fas fa-user-edit"></i>手動</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if spot.tags.all|length %}
+                    <div class="admin-chip-list">
+                        {% for tag in spot.tags.all %}
+                        <span class="admin-chip">#{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">タグなし</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">{{ spot.review_count }}</td>
+                <td class="text-end">{{ spot.weekly_views }}</td>
+                <td>{{ spot.created_at|date:'Y-m-d H:i' }}</td>
+                <td class="text-end">
+                    <div class="btn-group">
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ spot.get_absolute_url }}" target="_blank" rel="noopener">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_spot_edit' spot.pk %}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'admin_spot_delete' spot.pk %}">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">条件に一致するスポットがありません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'spots/admin/pagination.html' with page_obj=page_obj %}
+{% endblock %}

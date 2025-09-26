@@ -1,0 +1,21 @@
+{% extends 'spots/admin/base_admin.html' %}
+
+{% block admin_title %} | グループ削除{% endblock %}
+
+{% block admin_header %}
+<h1 class="admin-title text-danger"><i class="fas fa-trash me-2"></i>グループ削除</h1>
+<p class="admin-subtitle">グループ「{{ object.name }}」を削除しますか？</p>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card border-danger">
+    <div class="card-body">
+        <p class="mb-3">グループを削除すると、関連ユーザーからこのグループが取り消されます。</p>
+        <form method="post" class="d-flex gap-2">
+            {% csrf_token %}
+            <button class="btn btn-danger" type="submit"><i class="fas fa-trash me-1"></i>削除する</button>
+            <a class="btn btn-outline-secondary" href="{% url 'admin_group_list' %}">キャンセル</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

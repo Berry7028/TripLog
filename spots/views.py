@@ -111,17 +111,7 @@ def add_spot(request):
     if request.method == 'POST':
         form = SpotForm(request.POST, request.FILES)
         if form.is_valid():
-            spot = form.save(commit=False)
-            spot.created_by = request.user
-            spot.save()
-            # タグ処理（カンマ区切り）
-            tags_text = form.cleaned_data.get('tags_text') or ''
-            tag_objs = []
-            for raw in [t.strip() for t in tags_text.split(',') if t.strip()]:
-                tag, _ = Tag.objects.get_or_create(name=raw)
-                tag_objs.append(tag)
-            if tag_objs:
-                spot.tags.set(tag_objs)
+            spot = form.save(user=request.user)
             messages.success(request, 'スポットを投稿しました！')
             return redirect('spot_detail', spot_id=spot.id)
     else:

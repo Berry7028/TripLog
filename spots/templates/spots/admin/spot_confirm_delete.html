@@ -1,0 +1,27 @@
+{% extends 'spots/admin/base_admin.html' %}
+
+{% block admin_title %} | スポット削除{% endblock %}
+
+{% block admin_header %}
+<h1 class="admin-title text-danger"><i class="fas fa-trash me-2"></i>スポット削除</h1>
+<p class="admin-subtitle">この操作は元に戻せません。内容を確認してから実行してください。</p>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">削除対象</div>
+    <div class="card-body">
+        <p class="mb-3">以下のスポットを削除しますか？</p>
+        <ul class="list-group mb-3">
+            <li class="list-group-item"><strong>タイトル:</strong> {{ object.title }}</li>
+            <li class="list-group-item"><strong>投稿者:</strong> {{ object.created_by.username }}</li>
+            <li class="list-group-item"><strong>作成日:</strong> {{ object.created_at|date:'Y-m-d H:i' }}</li>
+        </ul>
+        <form method="post" class="d-flex gap-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash me-1"></i>削除する</button>
+            <a href="{% url 'admin_spot_list' %}" class="btn btn-outline-secondary">キャンセル</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

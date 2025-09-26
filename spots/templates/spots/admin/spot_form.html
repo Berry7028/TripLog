@@ -1,0 +1,104 @@
+{% extends 'spots/admin/base_admin.html' %}
+
+{% block admin_title %} | スポット{% if form.instance.pk %}編集{% else %}作成{% endif %}{% endblock %}
+
+{% block admin_header %}
+<h1 class="admin-title">
+    <i class="fas fa-map-marker-alt me-2"></i>
+    スポット{% if form.instance.pk %}編集{% else %}作成{% endif %}
+</h1>
+<p class="admin-subtitle">スポットの詳細情報を入力して保存します。</p>
+{% endblock %}
+
+{% block admin_content %}
+<form method="post" enctype="multipart/form-data" class="admin-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">基本情報</div>
+                <div class="card-body">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {{ form.title.errors }}
+
+                    {{ form.description.label_tag }}
+                    {{ form.description }}
+                    {{ form.description.errors }}
+
+                    {{ form.tags_text.label_tag }}
+                    {{ form.tags_text }}
+                    <div class="form-text">{{ form.tags_text.help_text }}</div>
+                    {{ form.tags_text.errors }}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">位置情報</div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        {{ form.latitude.label_tag }}
+                        {{ form.latitude }}
+                        {{ form.latitude.errors }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.longitude.label_tag }}
+                        {{ form.longitude }}
+                        {{ form.longitude.errors }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.address.label_tag }}
+                        {{ form.address }}
+                        {{ form.address.errors }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">属性</div>
+                <div class="card-body">
+                    <div class="form-check mb-3">
+                        {{ form.is_ai_generated }}
+                        {{ form.is_ai_generated.label_tag }}
+                        {{ form.is_ai_generated.errors }}
+                    </div>
+                    {{ form.created_by.label_tag }}
+                    {{ form.created_by }}
+                    {{ form.created_by.errors }}
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">画像</div>
+                <div class="card-body">
+                    {{ form.image.label_tag }}
+                    {{ form.image }}
+                    {{ form.image.errors }}
+                    <div class="form-text">ローカル画像をアップロードする場合はこちら</div>
+                    <hr>
+                    {{ form.image_url.label_tag }}
+                    {{ form.image_url }}
+                    {{ form.image_url.errors }}
+                    <div class="form-text">外部URLを指定する場合はこちら</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>保存</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_spot_list' %}">キャンセル</a>
+        {% if form.instance.pk %}
+        <a class="btn btn-outline-danger ms-auto" href="{% url 'admin_spot_delete' form.instance.pk %}"><i class="fas fa-trash me-1"></i>削除</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
