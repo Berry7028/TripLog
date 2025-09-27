@@ -10,6 +10,7 @@ from django.db.models import Q, Avg, Count
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .forms import ReviewForm, SpotForm, UserProfileForm
@@ -199,6 +200,7 @@ def register(request):
     return render(request, 'registration/register.html', {'form': form})
 
 
+@csrf_exempt
 @require_POST
 def record_share(request):
     """スポット共有時のアナリティクスログを保存するAPI"""
