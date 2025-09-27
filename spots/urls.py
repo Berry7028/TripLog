@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/search/', views.search_spots_api, name='search_spots_api'),
     path('api/spots/', views.spots_api, name='spots_api'),
     path('api/spots/add/', views.add_spot_api, name='add_spot_api'),
+    path('api/share/', views.record_share, name='record_share'),
 
     # 地図・プラン
     path('map/', views.map_view, name='map'),

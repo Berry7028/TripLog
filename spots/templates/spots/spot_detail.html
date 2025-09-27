@@ -42,6 +42,8 @@
                             data-share-title="{{ spot.title }}"
                             data-share-text="{{ spot.description|truncatechars:120 }}"
                             data-feedback-target="shareFeedback"
+                            data-analytics-url="{% url 'record_share' %}"
+                            data-spot-id="{{ spot.id }}"
                         >
                             <i class="fas fa-share-alt me-1"></i>シェア
                         </button>
@@ -51,6 +53,8 @@
                             id="copyUrlButton"
                             data-copy-url="{{ share_url }}"
                             data-feedback-target="shareFeedback"
+                            data-analytics-url="{% url 'record_share' %}"
+                            data-spot-id="{{ spot.id }}"
                         >
                             <i class="fas fa-copy me-1"></i>URLコピー
                         </button>

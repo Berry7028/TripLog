@@ -1,12 +1,13 @@
+import json
+import tempfile
+
 from django.contrib.auth.models import Group, Permission, User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
-import tempfile
-
 from .forms import SpotForm
-from .models import Review, Spot, SpotView, Tag, UserProfile
+from .models import Review, Spot, SpotShare, SpotView, Tag, UserProfile
 
 
 class SpotImageSrcTests(TestCase):
@@ -204,6 +205,73 @@ class AdminSpotCrudTests(TestCase):
         response = self.client.get(reverse('admin_spot_list'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('home'))
+
+
+class ShareAnalyticsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='shareuser', password='sharepass123')
+        self.spot = Spot.objects.create(
+            title='灯台の丘',
+            description='夜景がきれいな丘',
+            latitude=34.5,
+            longitude=135.4,
+            address='和歌山県',
+            created_by=self.user,
+        )
+
+    def post_share(self, payload, **extra):
+        return self.client.post(
+            reverse('record_share'),
+            data=json.dumps(payload),
+            content_type='application/json',
+            **extra,
+        )
+
+    def test_record_share_creates_log_for_anonymous_copy(self):
+        response = self.post_share(
+            {
+                'spot_id': self.spot.id,
+                'method': SpotShare.METHOD_COPY_LINK,
+                'share_url': f'https://example.com/spots/{self.spot.id}',
+            },
+            HTTP_USER_AGENT='TestAgent/1.0',
+            HTTP_REFERER='https://example.com/detail',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SpotShare.objects.count(), 1)
+        share = SpotShare.objects.get()
+        self.assertEqual(share.spot, self.spot)
+        self.assertEqual(share.method, SpotShare.METHOD_COPY_LINK)
+        self.assertIsNone(share.user)
+        self.assertEqual(share.share_url, f'https://example.com/spots/{self.spot.id}')
+        self.assertEqual(share.user_agent, 'TestAgent/1.0')
+        self.assertEqual(share.referrer, 'https://example.com/detail')
+
+    def test_record_share_links_authenticated_user(self):
+        self.client.force_login(self.user)
+        response = self.post_share(
+            {
+                'spot_id': self.spot.id,
+                'method': SpotShare.METHOD_WEB_SHARE,
+                'share_url': '',
+            },
+            HTTP_USER_AGENT='Browser/5.0',
+        )
+        self.assertEqual(response.status_code, 200)
+        share = SpotShare.objects.get()
+        self.assertEqual(share.user, self.user)
+        self.assertEqual(share.method, SpotShare.METHOD_WEB_SHARE)
+        self.assertEqual(share.share_url, '')
+
+    def test_record_share_rejects_unknown_method(self):
+        response = self.post_share(
+            {
+                'spot_id': self.spot.id,
+                'method': 'email',
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(SpotShare.objects.count(), 0)
 
 
 class AdminUserUpdateTests(TestCase):

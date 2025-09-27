@@ -107,3 +107,46 @@ class SpotView(models.Model):
 
     def __str__(self) -> str:
         return f'{self.spot.title} @ {self.viewed_at}'
+
+
+class SpotShare(models.Model):
+    """スポット詳細ページからのシェア操作ログ（ユーザーの興味関心を分析するために利用）"""
+
+    METHOD_WEB_SHARE = 'web_share'
+    METHOD_COPY_LINK = 'copy_link'
+    METHOD_CHOICES = [
+        (METHOD_WEB_SHARE, 'Web Share API'),
+        (METHOD_COPY_LINK, 'Link Copy'),
+    ]
+
+    spot = models.ForeignKey(
+        Spot,
+        on_delete=models.CASCADE,
+        related_name='spot_shares',
+        verbose_name='スポット',
+    )
+    method = models.CharField(max_length=20, choices=METHOD_CHOICES, verbose_name='シェア方法')
+    share_url = models.TextField(blank=True, verbose_name='共有URL')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='spot_shares',
+        verbose_name='シェアしたユーザー',
+    )
+    user_agent = models.TextField(blank=True, verbose_name='ユーザーエージェント')
+    referrer = models.TextField(blank=True, verbose_name='リファラ')
+    shared_at = models.DateTimeField(auto_now_add=True, verbose_name='共有日時')
+
+    class Meta:
+        verbose_name = 'スポットシェアログ'
+        verbose_name_plural = 'スポットシェアログ'
+        indexes = [
+            models.Index(fields=['shared_at']),
+            models.Index(fields=['spot', 'shared_at']),
+            models.Index(fields=['method', 'shared_at']),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.spot.title} ({self.get_method_display()}) @ {self.shared_at}'

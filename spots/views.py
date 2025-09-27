@@ -1,15 +1,19 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib import messages
-from django.db.models import Q, Avg, Count
-from django.utils import timezone
+import json
 from datetime import timedelta
-from django.http import JsonResponse
+
+from django.contrib import messages
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
-from .models import Spot, Review, UserProfile, Tag, SpotView
-from .forms import SpotForm, ReviewForm, UserProfileForm
+from django.db.models import Q, Avg, Count
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from .forms import ReviewForm, SpotForm, UserProfileForm
+from .models import Review, Spot, SpotShare, SpotView, Tag, UserProfile
 
 
 def home(request):
@@ -193,6 +197,43 @@ def register(request):
         form = UserCreationForm()
     
     return render(request, 'registration/register.html', {'form': form})
+
+
+@require_POST
+def record_share(request):
+    """スポット共有時のアナリティクスログを保存するAPI"""
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Invalid JSON payload'}, status=400)
+
+    spot_id = payload.get('spot_id')
+    method = payload.get('method')
+    share_url = payload.get('share_url', '') or ''
+
+    if not spot_id or not method:
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+
+    try:
+        spot = Spot.objects.get(id=spot_id)
+    except Spot.DoesNotExist:
+        return JsonResponse({'error': 'Spot not found'}, status=404)
+
+    valid_methods = {choice[0] for choice in SpotShare.METHOD_CHOICES}
+    if method not in valid_methods:
+        return JsonResponse({'error': 'Unsupported method'}, status=400)
+
+    SpotShare.objects.create(
+        spot=spot,
+        method=method,
+        share_url=share_url[:1024],
+        user=request.user if request.user.is_authenticated else None,
+        user_agent=(request.META.get('HTTP_USER_AGENT') or '')[:1024],
+        referrer=(request.META.get('HTTP_REFERER') or '')[:1024],
+    )
+
+    return JsonResponse({'status': 'ok'})
 
 
 def search_spots_api(request):

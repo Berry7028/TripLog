@@ -1,6 +1,25 @@
 (function (window, document) {
     'use strict';
 
+    function getCookie(name) {
+        if (!document.cookie) {
+            return null;
+        }
+
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i += 1) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                return decodeURIComponent(cookie.substring(name.length + 1));
+            }
+        }
+        return null;
+    }
+
+    function getCsrfToken() {
+        return getCookie('csrftoken');
+    }
+
     function showFeedback(feedbackEl, message, type) {
         if (!feedbackEl) {
             return;
@@ -34,6 +53,34 @@
         }
     }
 
+    async function recordShareAnalytics(endpoint, payload) {
+        if (!endpoint || !payload || !payload.spot_id || !payload.method) {
+            return;
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+        const csrfToken = getCsrfToken();
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+                credentials: 'same-origin',
+            });
+            if (!response.ok) {
+                throw new Error('Unexpected status: ' + response.status);
+            }
+        } catch (error) {
+            console.warn('Failed to record share analytics:', error);
+        }
+    }
+
     function initSpotShareButton() {
         const shareButton = document.getElementById('shareButton');
         if (!shareButton) {
@@ -45,6 +92,8 @@
         const shareText = shareButton.dataset.shareText || '';
         const feedbackId = shareButton.dataset.feedbackTarget;
         const feedbackEl = feedbackId ? document.getElementById(feedbackId) : null;
+        const analyticsEndpoint = shareButton.dataset.analyticsUrl || '';
+        const spotId = shareButton.dataset.spotId || '';
 
         let isSharing = false;
 
@@ -68,9 +117,19 @@
                         text: shareText,
                         url: shareUrl,
                     });
+                    await recordShareAnalytics(analyticsEndpoint, {
+                        spot_id: spotId,
+                        method: 'web_share',
+                        share_url: shareUrl,
+                    });
                     showFeedback(feedbackEl, '共有メニューを開きました。', 'info');
                 } else {
                     await copyToClipboard(shareUrl);
+                    await recordShareAnalytics(analyticsEndpoint, {
+                        spot_id: spotId,
+                        method: 'copy_link',
+                        share_url: shareUrl,
+                    });
                     showFeedback(feedbackEl, 'スポットのリンクをコピーしました！', 'success');
                 }
             } catch (error) {
@@ -99,6 +158,8 @@
         const copyUrl = copyButton.dataset.copyUrl || window.location.href;
         const feedbackId = copyButton.dataset.feedbackTarget;
         const feedbackEl = feedbackId ? document.getElementById(feedbackId) : null;
+        const analyticsEndpoint = copyButton.dataset.analyticsUrl || '';
+        const spotId = copyButton.dataset.spotId || '';
 
         copyButton.addEventListener('click', async function () {
             if (!copyUrl) {
@@ -108,6 +169,11 @@
 
             try {
                 await copyToClipboard(copyUrl);
+                await recordShareAnalytics(analyticsEndpoint, {
+                    spot_id: spotId,
+                    method: 'copy_link',
+                    share_url: copyUrl,
+                });
                 showFeedback(feedbackEl, 'スポットのリンクをコピーしました！', 'success');
             } catch (error) {
                 showFeedback(feedbackEl, 'コピーに失敗しました。お手数ですが手動でリンクをコピーしてください。', 'error');

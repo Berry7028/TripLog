@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Spot, Review, UserProfile, Tag
+from .models import Spot, Review, SpotShare, UserProfile, Tag
 
 
 @admin.register(Spot)
@@ -49,3 +49,11 @@ class UserProfileAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = ['name']
     search_fields = ['name']
+
+
+@admin.register(SpotShare)
+class SpotShareAdmin(admin.ModelAdmin):
+    list_display = ['spot', 'method', 'user', 'shared_at']
+    list_filter = ['method', 'shared_at']
+    search_fields = ['spot__title', 'user__username', 'share_url', 'user_agent']
+    readonly_fields = ['spot', 'method', 'share_url', 'user', 'user_agent', 'referrer', 'shared_at']
