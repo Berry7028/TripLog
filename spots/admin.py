@@ -7,6 +7,7 @@ from .models import (
     Spot,
     Tag,
     UserProfile,
+    UserRecommendationScore,
     UserSpotInteraction,
 )
 from .services import run_recommendation_for_user
@@ -121,3 +122,12 @@ class RecommendationJobLogAdmin(admin.ModelAdmin):
     search_fields = ['user__username']
     readonly_fields = ['user', 'source', 'triggered_by', 'executed_at', 'scored_spot_ids', 'metadata']
     ordering = ['-executed_at']
+
+
+@admin.register(UserRecommendationScore)
+class UserRecommendationScoreAdmin(admin.ModelAdmin):
+    list_display = ['user', 'spot', 'score', 'source', 'updated_at']
+    list_filter = ['source', 'updated_at']
+    search_fields = ['user__username', 'spot__title']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-score', '-updated_at']

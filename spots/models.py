@@ -245,3 +245,51 @@ class RecommendationJobLog(models.Model):
     @property
     def score_count(self) -> int:
         return len(self.scored_spot_ids or [])
+
+
+class UserRecommendationScore(models.Model):
+    """ユーザーごとのスポットおすすめスコアを事前計算して保存。"""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='recommendation_scores',
+        verbose_name='ユーザー',
+    )
+    spot = models.ForeignKey(
+        Spot,
+        on_delete=models.CASCADE,
+        related_name='recommendation_scores',
+        verbose_name='スポット',
+    )
+    score = models.FloatField(
+        default=0.0,
+        verbose_name='おすすめスコア',
+        help_text='0-100の範囲でAIが算出したスコア',
+    )
+    source = models.CharField(
+        max_length=20,
+        default='api',
+        verbose_name='スコア算出元',
+        help_text='api / fallback / manual など',
+    )
+    reason = models.TextField(
+        blank=True,
+        verbose_name='推薦理由',
+        help_text='AIが判断した推薦理由(任意)',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
+
+    class Meta:
+        verbose_name = 'ユーザーおすすめスコア'
+        verbose_name_plural = 'ユーザーおすすめスコア'
+        unique_together = ('user', 'spot')
+        ordering = ['-score', '-updated_at']
+        indexes = [
+            models.Index(fields=['user', '-score']),
+            models.Index(fields=['updated_at']),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.user.username} → {self.spot.title} (スコア: {self.score:.1f})'

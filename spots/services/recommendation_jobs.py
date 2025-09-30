@@ -3,22 +3,28 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 
 from ..models import (
     RecommendationJobLog,
     RecommendationJobSetting,
+    Spot,
+    UserRecommendationScore,
     UserSpotInteraction,
 )
 from .analytics import RecommendationResult, order_spots_by_relevance
 
+logger = logging.getLogger(__name__)
+
 TOOL_NAME = 'store_user_recommendation_scores'
 TOOL_SCHEMA_VERSION = '1.0'
-DEFAULT_INTERVAL_HOURS = 31
+DEFAULT_INTERVAL_HOURS = 1  # 1時間に1回実行
 
 
 @dataclass(frozen=True)
@@ -292,3 +298,134 @@ def _resolve_user(arguments: Dict[str, Any]):
         user = User.objects.filter(username=username).first()
 
     return user
+
+
+def compute_and_store_all_user_scores(
+    *,
+    triggered_by: str = RecommendationJobLog.TRIGGER_AUTO,
+    batch_size: int = 100,
+) -> Dict[str, Any]:
+    """全ユーザーのおすすめスコアをバックグラウンドで計算してDBに保存する。
+    
+    Returns:
+        実行結果のサマリー情報
+    """
+    User = get_user_model()
+    
+    # 閲覧履歴があるユーザーのみ対象
+    users_with_interactions = User.objects.filter(
+        spot_interactions__isnull=False
+    ).distinct()
+    
+    # 全スポットを取得(prefetchでタグも取得)
+    all_spots = list(
+        Spot.objects.all()
+        .prefetch_related('tags')
+        .order_by('id')
+    )
+    
+    if not all_spots:
+        logger.info('スポットが存在しないため、スコア計算をスキップします。')
+        return {
+            'success': True,
+            'users_processed': 0,
+            'scores_saved': 0,
+            'message': 'スポットが存在しません',
+        }
+    
+    total_users = 0
+    total_scores_saved = 0
+    errors = []
+    
+    for user in users_with_interactions:
+        try:
+            result = _compute_and_store_user_scores(
+                user=user,
+                all_spots=all_spots,
+                triggered_by=triggered_by,
+            )
+            if result:
+                total_users += 1
+                total_scores_saved += result.get('scores_saved', 0)
+                logger.info(
+                    f'ユーザー {user.username} のスコア計算完了: {result.get("scores_saved", 0)}件'
+                )
+        except Exception as e:
+            error_msg = f'ユーザー {user.username} のスコア計算でエラー: {e}'
+            logger.error(error_msg)
+            errors.append(error_msg)
+    
+    return {
+        'success': len(errors) == 0,
+        'users_processed': total_users,
+        'scores_saved': total_scores_saved,
+        'errors': errors,
+        'timestamp': timezone.now().isoformat(),
+    }
+
+
+def _compute_and_store_user_scores(
+    user,
+    all_spots: List[Spot],
+    *,
+    triggered_by: str = RecommendationJobLog.TRIGGER_AUTO,
+) -> Optional[Dict[str, Any]]:
+    """指定ユーザーの全スポットに対するスコアを計算してDBに保存する。"""
+    
+    # ユーザーの閲覧履歴を取得
+    interactions = list(
+        UserSpotInteraction.objects.filter(user=user)
+        .select_related('spot')
+        .prefetch_related('spot__tags')
+    )
+    
+    if not interactions:
+        return None
+    
+    # 全スポットをスコアリング
+    result = order_spots_by_relevance(all_spots, user)
+    
+    if not result.scores:
+        logger.warning(f'ユーザー {user.username} のスコア計算結果が空です')
+        return None
+    
+    # トランザクション内でスコアを保存
+    with transaction.atomic():
+        # 既存のスコアを削除
+        UserRecommendationScore.objects.filter(user=user).delete()
+        
+        # 新しいスコアを一括作成
+        scores_to_create = []
+        for spot_id, score_value in result.scores.items():
+            # spot_idからSpotオブジェクトを取得
+            spot = next((s for s in all_spots if s.id == spot_id), None)
+            if spot:
+                scores_to_create.append(
+                    UserRecommendationScore(
+                        user=user,
+                        spot=spot,
+                        score=score_value,
+                        source=result.source,
+                    )
+                )
+        
+        if scores_to_create:
+            UserRecommendationScore.objects.bulk_create(scores_to_create)
+        
+        # ログを記録
+        RecommendationJobLog.objects.create(
+            user=user,
+            source=result.source,
+            triggered_by=triggered_by,
+            scored_spot_ids=list(result.scored_spot_ids),
+            metadata={
+                'interaction_count': len(interactions),
+                'total_spots': len(all_spots),
+                'scored_count': len(result.scores),
+            },
+        )
+    
+    return {
+        'scores_saved': len(scores_to_create),
+        'source': result.source,
+    }

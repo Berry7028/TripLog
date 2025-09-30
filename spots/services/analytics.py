@@ -42,7 +42,8 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
     if not interactions:
         return RecommendationResult(spots_list)
 
-    api_scores = _request_scores_from_openrouter(user, interactions)
+    # 全スポット情報をAIに渡して、未閲覧スポットも含めて分析させる
+    api_scores = _request_scores_from_openrouter(user, interactions, all_spots=spots_list)
     scores: Dict[int, float]
     source = 'none'
 
@@ -95,8 +96,18 @@ def _compute_fallback_score(interaction: UserSpotInteraction) -> float:
     return view_bonus + recency_bonus + duration_bonus
 
 
-def _request_scores_from_openrouter(user, interactions: Iterable[UserSpotInteraction]) -> Dict[int, float]:
-    """OpenRouter API からスコアを取得する。失敗時は空 dict を返す。"""
+def _request_scores_from_openrouter(
+    user,
+    user_interactions: Iterable[UserSpotInteraction],
+    all_spots: Sequence = None,
+) -> Dict[int, float]:
+    """OpenRouter API からスコアを取得する。失敗時は空 dict を返す。
+    
+    Args:
+        user: 対象ユーザー
+        user_interactions: ユーザーの閲覧履歴
+        all_spots: 全スポットのリスト。Noneの場合は閲覧済みスポットのみスコアリング
+    """
 
     api_key = getattr(settings, 'OPENROUTER_API_KEY', None)
     if not api_key:
@@ -111,24 +122,45 @@ def _request_scores_from_openrouter(user, interactions: Iterable[UserSpotInterac
     model = getattr(settings, 'OPENROUTER_RECOMMENDATION_MODEL', 'openai/gpt-4o-mini')
     timeout = getattr(settings, 'OPENROUTER_TIMEOUT', 15)
 
-    interaction_payload = [_serialize_interaction(interaction) for interaction in interactions]
+    # ユーザーの閲覧履歴
+    interaction_payload = [_serialize_interaction(interaction) for interaction in user_interactions]
+    
+    # スコアリング対象のスポット一覧
+    target_spots_payload = []
+    if all_spots:
+        # 全スポットをスコアリング対象とする
+        for spot in all_spots:
+            target_spots_payload.append({
+                'spot_id': spot.id,
+                'title': spot.title,
+                'description': spot.description,
+                'tags': [tag.name for tag in spot.tags.all()],
+            })
+    
     system_prompt = (
         'あなたは旅行アプリのレコメンドAIです。ユーザーの閲覧履歴を受け取り、'
-        '各スポットの関連度スコア(0〜100)を JSON 形式で返してください。'
-        '必ず {"scores": [{"spot_id": number, "score": number}]} の形式で出力します。'
+        '各スポットの関連度スコア(0〜100)を JSON 形式で返してください。\n\n'
+        '重要な指示:\n'
+        '1. ユーザーが過去に閲覧したスポット(interactions)の傾向を分析してください。\n'
+        '2. 全スポットリスト(target_spots)には、ユーザーがまだ見ていないスポットも含まれています。\n'
+        '3. 閲覧済みスポットと類似のタグ、説明、テーマを持つ未閲覧スポットは、高いスコアを付けてください。\n'
+        '4. ユーザーの興味・嗜好に合致する新しい発見となるスポットを積極的に推薦してください。\n'
+        '5. 出力形式: {"scores": [{"spot_id": number, "score": number, "reason": string}]}\n'
+        '   reasonには推薦理由を簡潔に記述してください(任意)。'
     )
+
+    user_message_content = {
+        'user': user.username,
+        'interactions': interaction_payload,
+    }
+    if target_spots_payload:
+        user_message_content['target_spots'] = target_spots_payload
 
     messages = [
         {"role": 'system', "content": system_prompt},
         {
             "role": 'user',
-            "content": json.dumps(
-                {
-                    'user': user.username,
-                    'interactions': interaction_payload,
-                },
-                ensure_ascii=False,
-            ),
+            "content": json.dumps(user_message_content, ensure_ascii=False),
         },
     ]
 
@@ -170,6 +202,7 @@ def _request_scores_from_openrouter(user, interactions: Iterable[UserSpotInterac
         return {}
 
     scores: Dict[int, float] = {}
+    reasons: Dict[int, str] = {}
     for item in parsed.get('scores', []):
         try:
             spot_id = int(item['spot_id'])
@@ -177,7 +210,11 @@ def _request_scores_from_openrouter(user, interactions: Iterable[UserSpotInterac
         except (KeyError, TypeError, ValueError):
             continue
         scores[spot_id] = score
+        if 'reason' in item and isinstance(item['reason'], str):
+            reasons[spot_id] = item['reason']
 
+    # reasonsも保存できるようにするため、追加情報として返す
+    # (既存の戻り値との互換性のため、scoresのみ返すが、必要に応じて拡張可能)
     return scores
 
 

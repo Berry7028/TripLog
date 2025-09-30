@@ -9,9 +9,8 @@ from datetime import timedelta
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
-from .models import Spot, Review, UserProfile, Tag, SpotView, UserSpotInteraction
+from .models import Spot, Review, UserProfile, Tag, SpotView, UserSpotInteraction, UserRecommendationScore
 from .forms import SpotForm, ReviewForm, UserProfileForm
-from .services import order_spots_by_relevance
 
 
 def home(request):
@@ -38,21 +37,49 @@ def home(request):
         sort_mode = 'recent'
 
     spots_list = list(spots_qs)
-    recommendation_result = None
     recommendation_source = None
     recommendation_notice = None
+    recommendation_scored_ids = []
 
     if sort_mode == 'relevance':
         if request.user.is_authenticated:
-            recommendation_result = order_spots_by_relevance(spots_list, request.user)
-            spots_list = recommendation_result.spots
-            recommendation_source = recommendation_result.source
-            if recommendation_source == 'api':
-                recommendation_notice = 'AIが分析したおすすめ順で表示しています。'
-            elif recommendation_source == 'fallback':
-                recommendation_notice = '閲覧履歴をもとに推定したおすすめ順です（AI連携が現在利用できません）。'
+            # DBから保存済みスコアを取得して並び替え
+            user_scores = UserRecommendationScore.objects.filter(
+                user=request.user,
+                spot__in=spots_list
+            ).select_related('spot')
+            
+            if user_scores.exists():
+                # スコアマップを作成
+                score_map = {score.spot_id: score.score for score in user_scores}
+                source_info = user_scores.first().source if user_scores.first() else 'none'
+                
+                # スコアがあるスポットとないスポットを分ける
+                scored_spots = []
+                unscored_spots = []
+                
+                for spot in spots_list:
+                    if spot.id in score_map:
+                        scored_spots.append(spot)
+                        recommendation_scored_ids.append(spot.id)
+                    else:
+                        unscored_spots.append(spot)
+                
+                # スコアでソート
+                scored_spots.sort(key=lambda s: score_map.get(s.id, 0), reverse=True)
+                
+                # スコアがあるスポットを先に、その後未スコアのスポットを追加
+                spots_list = scored_spots + unscored_spots
+                
+                recommendation_source = source_info
+                if source_info == 'api':
+                    recommendation_notice = 'AIが分析したおすすめ順で表示しています。'
+                elif source_info == 'fallback':
+                    recommendation_notice = '閲覧履歴をもとに推定したおすすめ順です。'
+                else:
+                    recommendation_notice = 'おすすめ順で表示しています。'
             else:
-                recommendation_notice = '閲覧履歴がまだ少ないため、最新順で表示しています。'
+                recommendation_notice = 'おすすめスコアがまだ計算されていません。しばらくお待ちください。'
         else:
             recommendation_notice = 'おすすめ順を利用するにはログインしてください。'
 
@@ -67,11 +94,7 @@ def home(request):
         'sort_mode': sort_mode,
         'recommendation_source': recommendation_source,
         'recommendation_notice': recommendation_notice,
-        'recommendation_scored_ids': (
-            list(recommendation_result.scored_spot_ids)
-            if recommendation_result
-            else []
-        ),
+        'recommendation_scored_ids': recommendation_scored_ids,
     }
     return render(request, 'spots/home.html', context)
 
