@@ -1,0 +1,178 @@
+{% extends 'spots/admin/base_admin.html' %}
+
+{% block admin_title %} - おすすめスコア一覧{% endblock %}
+
+{% block admin_header %}
+<h1><i class="fas fa-star me-2"></i>おすすめスコア一覧</h1>
+{% endblock %}
+
+{% block admin_content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">ユーザー</label>
+                <select name="user" class="form-select">
+                    <option value="">全て</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if selected_user == user.id|stringformat:"s" %}selected{% endif %}>
+                        {{ user.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">スポット</label>
+                <select name="spot" class="form-select">
+                    <option value="">全て</option>
+                    {% for spot in spots %}
+                    <option value="{{ spot.id }}" {% if selected_spot == spot.id|stringformat:"s" %}selected{% endif %}>
+                        {{ spot.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">スコア算出元</label>
+                <select name="source" class="form-select">
+                    <option value="">全て</option>
+                    {% for src in source_choices %}
+                    <option value="{{ src }}" {% if selected_source == src %}selected{% endif %}>
+                        {{ src|upper }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">
+                    <i class="fas fa-search me-1"></i>検索
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>スコア一覧 ({{ page_obj.paginator.count }}件)</span>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSelected()">
+                <i class="fas fa-trash me-1"></i>選択削除
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form method="post" id="scoreForm">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="formAction">
+            
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th>ユーザー</th>
+                            <th>スポット</th>
+                            <th class="text-end">スコア</th>
+                            <th>算出元</th>
+                            <th>更新日時</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for score in scores %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input score-checkbox" 
+                                       name="selected" value="{{ score.id }}">
+                            </td>
+                            <td>{{ score.user.username }}</td>
+                            <td>{{ score.spot.title }}</td>
+                            <td class="text-end">
+                                <strong>{{ score.score|floatformat:1 }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if score.source == 'api' %}success{% elif score.source == 'fallback' %}warning{% else %}secondary{% endif %}">
+                                    {{ score.source|upper }}
+                                </span>
+                            </td>
+                            <td>{{ score.updated_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="recalculateUser({{ score.user.id }}, '{{ score.user.username }}')">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                スコアがありません
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-3">
+    {% include 'spots/admin/pagination.html' %}
+</nav>
+{% endif %}
+
+<script>
+document.getElementById('selectAll').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.score-checkbox');
+    checkboxes.forEach(cb => cb.checked = this.checked);
+});
+
+function deleteSelected() {
+    const selected = document.querySelectorAll('.score-checkbox:checked');
+    if (selected.length === 0) {
+        alert('削除するスコアを選択してください。');
+        return;
+    }
+    if (confirm(`${selected.length}件のスコアを削除しますか?`)) {
+        document.getElementById('formAction').value = 'delete_selected';
+        document.getElementById('scoreForm').submit();
+    }
+}
+
+function recalculateUser(userId, username) {
+    if (confirm(`${username} のスコアを再計算しますか?`)) {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.innerHTML = `
+            {% csrf_token %}
+            <input type="hidden" name="action" value="recalculate_user">
+            <input type="hidden" name="user_id" value="${userId}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

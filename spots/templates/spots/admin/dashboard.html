@@ -39,6 +39,14 @@
         <div class="metric-value">{{ views_last_week }}</div>
         <div class="metric-footer">SpotView ログ</div>
     </div>
+    <div class="metric-card">
+        <div class="metric-icon metric-icon--ai"><i class="fas fa-robot"></i></div>
+        <div class="metric-label">AIおすすめスコア</div>
+        <div class="metric-value">{{ ai_scores_count|default:0 }}</div>
+        <div class="metric-footer">
+            <a href="{% url 'admin_recommendation' %}" style="color: inherit; text-decoration: none;">管理画面へ →</a>
+        </div>
+    </div>
 </section>
 
 <section class="admin-panels">
