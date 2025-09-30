@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.urls import reverse
 
 
@@ -144,3 +144,104 @@ class UserSpotInteraction(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.username} → {self.spot.title} ({self.view_count}回)'
+
+
+class RecommendationJobSetting(models.Model):
+    """AIおすすめ解析のバックグラウンド実行設定。"""
+
+    interval_hours = models.PositiveIntegerField(
+        default=31,
+        validators=[MinValueValidator(1)],
+        verbose_name='解析間隔 (時間)',
+        help_text='バックグラウンド解析を実行する間隔 (例: 31 時間ごと)。',
+    )
+    enabled = models.BooleanField(
+        default=True,
+        verbose_name='バックグラウンド解析を有効化',
+    )
+    last_run_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='最後に実行した日時',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
+
+    class Meta:
+        verbose_name = 'おすすめ解析設定'
+        verbose_name_plural = 'おすすめ解析設定'
+
+    def __str__(self) -> str:
+        status = '有効' if self.enabled else '停止中'
+        return f'おすすめ解析 ({self.interval_hours}時間間隔, {status})'
+
+
+class RecommendationJobLog(models.Model):
+    """AI おすすめ解析の実行ログ。"""
+
+    SOURCE_API = 'api'
+    SOURCE_FALLBACK = 'fallback'
+    SOURCE_NONE = 'none'
+
+    TRIGGER_AUTO = 'auto'
+    TRIGGER_ADMIN = 'admin'
+    TRIGGER_CLI = 'cli'
+    TRIGGER_API = 'api'
+
+    SOURCE_CHOICES = [
+        (SOURCE_API, 'API'),
+        (SOURCE_FALLBACK, 'フォールバック'),
+        (SOURCE_NONE, 'スコアなし'),
+    ]
+    TRIGGER_CHOICES = [
+        (TRIGGER_AUTO, 'スケジュール'),
+        (TRIGGER_ADMIN, '管理画面'),
+        (TRIGGER_CLI, 'CLI'),
+        (TRIGGER_API, 'API ツールコール'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='recommendation_logs',
+        verbose_name='対象ユーザー',
+    )
+    executed_at = models.DateTimeField(auto_now_add=True, verbose_name='実行日時')
+    source = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_NONE,
+        verbose_name='スコア算出元',
+    )
+    triggered_by = models.CharField(
+        max_length=20,
+        choices=TRIGGER_CHOICES,
+        default=TRIGGER_AUTO,
+        verbose_name='実行トリガー',
+    )
+    scored_spot_ids = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='スコアリング対象スポットID',
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='追加メタ情報',
+    )
+
+    class Meta:
+        verbose_name = 'おすすめ解析ログ'
+        verbose_name_plural = 'おすすめ解析ログ'
+        ordering = ['-executed_at']
+        indexes = [
+            models.Index(fields=['executed_at']),
+            models.Index(fields=['user', 'executed_at']),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.user.username} ({self.executed_at:%Y-%m-%d %H:%M})'
+
+    @property
+    def score_count(self) -> int:
+        return len(self.scored_spot_ids or [])

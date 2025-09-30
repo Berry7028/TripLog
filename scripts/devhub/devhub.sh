@@ -147,6 +147,7 @@ show_script_summary() {
     print_script_status "start_server.sh" "既存環境でのサーバー起動"
     print_script_status "ai_generate_spots.sh" "AIによるスポットデータ生成"
     print_script_status "flow/generate_flow.py" "画面フロー図の生成"
+    print_script_status "run_recommendation_jobs.sh" "AI閲覧分析バッチの実行"
     print_script_status "run_tests.sh" "Djangoテストスイートの実行"
 }
 
@@ -201,6 +202,29 @@ run_tests() {
     fi
 }
 
+run_recommendation_job() {
+    print_header "AIおすすめ解析ジョブを実行します"
+    local user_input force_choice schema_choice
+    declare -a args=()
+
+    read -r -p "特定ユーザーIDを指定しますか？(空欄で全体解析): " user_input
+    if [ -n "$user_input" ]; then
+        args+=(--user-id "$user_input")
+    fi
+
+    read -r -p "force オプションで即時実行しますか？(y/N): " force_choice
+    if [[ "$force_choice" =~ ^[Yy]$ ]]; then
+        args+=(--force)
+    fi
+
+    read -r -p "ツールスキーマを表示しますか？(y/N): " schema_choice
+    if [[ "$schema_choice" =~ ^[Yy]$ ]]; then
+        args+=(--print-tool-schema)
+    fi
+
+    bash "$SCRIPTS_DIR/run_recommendation_jobs.sh" "${args[@]}"
+}
+
 run_tests_interactive() {
     local input
     read -r -p "manage.py test に渡す追加引数 (空欄で全テスト): " input
@@ -242,6 +266,7 @@ show_menu() {
   6) テスト実行 (manage.py test)
   7) requirements.txt インストール (pip install -r requirements.txt)
   8) マイグレーション実行 (makemigrations && migrate)
+  9) AI閲覧分析バッチ実行 (run_recommendation_jobs.sh)
   0) 終了
 MENU
         read -r -p "番号を入力 > " choice
@@ -271,6 +296,9 @@ MENU
             8)
                 run_migrations
                 ;;
+            9)
+                run_recommendation_job
+                ;;
             0)
                 print_info "終了します"
                 break
@@ -296,6 +324,7 @@ command:
   test [ARGS] manage.py test を実行 (ARGS は任意指定)
   install_requirements requirements.txt をインストール
   migrate     makemigrations && migrate を実行
+  recommend [ARGS] run_recommendation_jobs.sh を実行
   help        このメッセージを表示
 USAGE
 }
@@ -334,6 +363,9 @@ run_cli() {
             ;;
         migrate)
             run_migrations
+            ;;
+        recommend)
+            bash "$SCRIPTS_DIR/run_recommendation_jobs.sh" "$@"
             ;;
         help|--help|-h)
             usage

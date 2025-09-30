@@ -23,6 +23,7 @@ class RecommendationResult:
     spots: List
     source: str = 'none'  # 'api' | 'fallback' | 'none'
     scored_spot_ids: Set[int] = field(default_factory=set)
+    scores: Dict[int, float] = field(default_factory=dict)
 
 
 def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
@@ -69,7 +70,12 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
         )
 
     sorted_spots = sorted(spots_list, key=sort_key, reverse=True)
-    return RecommendationResult(sorted_spots, source=source, scored_spot_ids=set(scores.keys()))
+    return RecommendationResult(
+        sorted_spots,
+        source=source,
+        scored_spot_ids=set(scores.keys()),
+        scores=scores,
+    )
 
 
 def _compute_fallback_score(interaction: UserSpotInteraction) -> float:

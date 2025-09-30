@@ -13,6 +13,7 @@ TripLog/
     ├── start_server.sh       # 既存環境でサーバーを起動
     ├── dev_start.sh          # 仮想環境構築からサーバー起動まで
     ├── ai_generate_spots.sh  # AI を使ったスポットデータ生成
+    ├── run_recommendation_jobs.sh # AI閲覧分析バッチの実行
     └── flow/
         └── generate_flow.py  # 画面フロー図を生成
 ```
@@ -39,6 +40,10 @@ TripLog/
 3. サーバー起動 (`start_server.sh`)
 4. AI スポット生成 (`ai_generate_spots.sh`)
 5. 画面フロー図生成 (`flow/generate_flow.py`)
+6. テスト実行 (`manage.py test`)
+7. requirements.txt インストール (`pip install -r requirements.txt`)
+8. マイグレーション実行 (`makemigrations && migrate`)
+9. AI 閲覧分析バッチ実行 (`run_recommendation_jobs.sh`)
 0. 終了
 
 ### CLI から直接コマンドを指定する
@@ -66,6 +71,7 @@ TripLog/
 | `start` | `scripts/start_server.sh` を実行 |
 | `ai` | `scripts/ai_generate_spots.sh` を実行 |
 | `flow [URL]` | `flow/generate_flow.py` を実行 (URL 省略時は `http://127.0.0.1:8000/`) |
+| `recommend [ARGS]` | `scripts/run_recommendation_jobs.sh` を実行 |
 
 ## 🔧 直接サブスクリプトを使いたい場合
 
@@ -107,6 +113,21 @@ TripLog/
 - LM Studio が起動している
 - OpenAI 互換 API が有効化されている
 - モデル (デフォルト: `qwen/qwen3-4b-2507`) がロードされている
+
+### AI 閲覧分析バッチ
+```bash
+./scripts/run_recommendation_jobs.sh --print-tool-schema --dry-run
+```
+**機能**
+- OpenRouter 連携またはフォールバック計算でおすすめスコアを解析
+- Django 管理画面の設定間隔を考慮したスケジュール実行
+- `--user-id` / `--username` で対象ユーザーを限定
+- `--print-tool-schema` で LLM 用ツールスキーマを確認
+- `--dry-run` でログを書き込まずに挙動を確認
+
+**補足**
+- 管理画面から解析を実行すると RecommendationJobLog に履歴が残ります。
+- スケジュール実行時は `RecommendationJobSetting` の `interval_hours` と `enabled` が参照されます。
 
 ## 🗺️ 画面フロー図生成 (Mermaid 推奨)
 
