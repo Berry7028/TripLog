@@ -71,3 +71,5 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 .DS_Store
+
+copilot-instructions.md
