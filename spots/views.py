@@ -3,39 +3,75 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, F
 from django.utils import timezone
 from datetime import timedelta
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from .models import Spot, Review, UserProfile, Tag, SpotView
+from django.views.decorators.http import require_POST
+from .models import Spot, Review, UserProfile, Tag, SpotView, UserSpotInteraction
 from .forms import SpotForm, ReviewForm, UserProfileForm
+from .services import order_spots_by_relevance
 
 
 def home(request):
     """ホームページ - スポット一覧"""
-    spots = Spot.objects.all().select_related('created_by').prefetch_related('reviews')
-    
+    spots_qs = (
+        Spot.objects.all()
+        .select_related('created_by')
+        .prefetch_related('reviews', 'tags')
+    )
+
     # 検索機能
     # 空や未指定でもフォームに"None"が入らないよう空文字に正規化
     search_query = request.GET.get('search', '') or ''
     if search_query:
-        spots = spots.filter(
+        spots_qs = spots_qs.filter(
             Q(title__icontains=search_query) |
             Q(description__icontains=search_query) |
             Q(address__icontains=search_query) |
             Q(tags__name__icontains=search_query)
-        )
-        spots = spots.distinct()
-    
+        ).distinct()
+
+    sort_mode = request.GET.get('sort', 'recent')
+    if sort_mode not in ('recent', 'relevance'):
+        sort_mode = 'recent'
+
+    spots_list = list(spots_qs)
+    recommendation_result = None
+    recommendation_source = None
+    recommendation_notice = None
+
+    if sort_mode == 'relevance':
+        if request.user.is_authenticated:
+            recommendation_result = order_spots_by_relevance(spots_list, request.user)
+            spots_list = recommendation_result.spots
+            recommendation_source = recommendation_result.source
+            if recommendation_source == 'api':
+                recommendation_notice = 'AIが分析したおすすめ順で表示しています。'
+            elif recommendation_source == 'fallback':
+                recommendation_notice = '閲覧履歴をもとに推定したおすすめ順です（AI連携が現在利用できません）。'
+            else:
+                recommendation_notice = '閲覧履歴がまだ少ないため、最新順で表示しています。'
+        else:
+            recommendation_notice = 'おすすめ順を利用するにはログインしてください。'
+
     # ページネーション
-    paginator = Paginator(spots, 12)  # 1ページに12件表示
+    paginator = Paginator(spots_list, 12)  # 1ページに12件表示
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
+        'sort_mode': sort_mode,
+        'recommendation_source': recommendation_source,
+        'recommendation_notice': recommendation_notice,
+        'recommendation_scored_ids': (
+            list(recommendation_result.scored_spot_ids)
+            if recommendation_result
+            else []
+        ),
     }
     return render(request, 'spots/home.html', context)
 
@@ -50,6 +86,20 @@ def spot_detail(request, spot_id):
         except Exception:
             # ログ記録は失敗しても画面表示を継続
             pass
+        if request.user.is_authenticated:
+            try:
+                interaction, created = UserSpotInteraction.objects.get_or_create(
+                    user=request.user,
+                    spot=spot,
+                    defaults={'view_count': 1},
+                )
+                if not created:
+                    interaction.view_count = F('view_count') + 1
+                    interaction.save(update_fields=['view_count'])
+                    interaction.refresh_from_db(fields=['view_count'])
+            except Exception:
+                # 記録に失敗しても画面表示を優先
+                pass
     reviews = spot.reviews.all().select_related('user')
 
     # 平均評価を計算
@@ -84,6 +134,36 @@ def spot_detail(request, spot_id):
         'share_url': share_url,
     }
     return render(request, 'spots/spot_detail.html', context)
+
+
+@login_required
+@require_POST
+def record_spot_view(request, spot_id):
+    """スポット閲覧の滞在時間を記録"""
+
+    spot = get_object_or_404(Spot, id=spot_id)
+
+    try:
+        duration_ms = float(request.POST.get('duration_ms', 0))
+    except (TypeError, ValueError):
+        duration_ms = 0.0
+
+    duration_ms = max(duration_ms, 0.0)
+    duration = timedelta(milliseconds=duration_ms)
+
+    interaction, _ = UserSpotInteraction.objects.get_or_create(
+        user=request.user,
+        spot=spot,
+        defaults={'view_count': 1},
+    )
+
+    if duration > timedelta(0):
+        interaction.total_view_duration += duration
+
+    # auto_now=True のため last_viewed_at は save 時に更新される
+    interaction.save(update_fields=['total_view_duration', 'last_viewed_at'])
+
+    return JsonResponse({'success': True})
 
 
 def ranking(request):

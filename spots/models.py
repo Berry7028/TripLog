@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -107,3 +109,38 @@ class SpotView(models.Model):
 
     def __str__(self) -> str:
         return f'{self.spot.title} @ {self.viewed_at}'
+
+
+class UserSpotInteraction(models.Model):
+    """ユーザーごとのスポット閲覧・滞在時間の分析用データ"""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='spot_interactions',
+        verbose_name='ユーザー',
+    )
+    spot = models.ForeignKey(
+        Spot,
+        on_delete=models.CASCADE,
+        related_name='user_interactions',
+        verbose_name='スポット',
+    )
+    view_count = models.PositiveIntegerField(default=0, verbose_name='閲覧回数')
+    total_view_duration = models.DurationField(
+        default=timedelta,
+        verbose_name='累積滞在時間',
+    )
+    last_viewed_at = models.DateTimeField(auto_now=True, verbose_name='最終閲覧日時')
+
+    class Meta:
+        verbose_name = 'ユーザー閲覧データ'
+        verbose_name_plural = 'ユーザー閲覧データ'
+        unique_together = ('user', 'spot')
+        indexes = [
+            models.Index(fields=['user', 'spot']),
+            models.Index(fields=['-last_viewed_at']),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.user.username} → {self.spot.title} ({self.view_count}回)'

@@ -1,12 +1,16 @@
+import tempfile
+from datetime import timedelta
+from unittest.mock import patch
+
 from django.contrib.auth.models import Group, Permission, User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
-
-import tempfile
+from django.utils import timezone
 
 from .forms import SpotForm
-from .models import Review, Spot, SpotView, Tag, UserProfile
+from .models import Review, Spot, SpotView, Tag, UserProfile, UserSpotInteraction
+from .services import order_spots_by_relevance
 
 
 class SpotImageSrcTests(TestCase):
@@ -396,3 +400,140 @@ class AdminProfileAndLogListTests(TestCase):
         response = self.client.get(reverse('admin_spotview_list'), {'spot': self.spot.id})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.spot.title)
+
+
+class UserSpotInteractionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='viewer', password='viewpass123')
+        self.spot = Spot.objects.create(
+            title='展望台',
+            description='夜景がきれい',
+            latitude=35.0,
+            longitude=135.0,
+            address='大阪府',
+            created_by=self.user,
+        )
+
+    def test_detail_view_creates_interaction_and_counts_click(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('spot_detail', args=[self.spot.id]))
+        self.assertEqual(response.status_code, 200)
+
+        interaction = UserSpotInteraction.objects.get(user=self.user, spot=self.spot)
+        self.assertEqual(interaction.view_count, 1)
+        self.assertEqual(interaction.total_view_duration.total_seconds(), 0)
+
+    def test_multiple_visits_increment_view_count(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse('spot_detail', args=[self.spot.id]))
+        self.client.get(reverse('spot_detail', args=[self.spot.id]))
+
+        interaction = UserSpotInteraction.objects.get(user=self.user, spot=self.spot)
+        self.assertEqual(interaction.view_count, 2)
+
+    def test_record_spot_view_updates_duration(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse('spot_detail', args=[self.spot.id]))
+
+        response = self.client.post(
+            reverse('record_spot_view', args=[self.spot.id]),
+            data={'duration_ms': '1500'},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        interaction = UserSpotInteraction.objects.get(user=self.user, spot=self.spot)
+        self.assertEqual(interaction.view_count, 1)
+        self.assertAlmostEqual(
+            interaction.total_view_duration.total_seconds(),
+            1.5,
+            places=1,
+        )
+
+    def test_record_spot_view_requires_login(self):
+        response = self.client.post(
+            reverse('record_spot_view', args=[self.spot.id]),
+            data={'duration_ms': '1000'},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response.url)
+
+
+class RecommendationServiceTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='reco', password='recopass123')
+        self.other = User.objects.create_user(username='other', password='otherpass123')
+
+        self.spot1 = Spot.objects.create(
+            title='港',
+            description='夕焼けが綺麗な港',
+            latitude=34.0,
+            longitude=135.0,
+            address='兵庫県',
+            created_by=self.other,
+        )
+        self.spot2 = Spot.objects.create(
+            title='山頂',
+            description='登山コースの絶景',
+            latitude=36.0,
+            longitude=138.0,
+            address='長野県',
+            created_by=self.other,
+        )
+        self.spot3 = Spot.objects.create(
+            title='美術館',
+            description='現代アートが豊富',
+            latitude=35.6,
+            longitude=139.7,
+            address='東京都',
+            created_by=self.other,
+        )
+
+        now = timezone.now()
+        i1 = UserSpotInteraction.objects.create(
+            user=self.user,
+            spot=self.spot1,
+            view_count=3,
+            total_view_duration=timedelta(minutes=5),
+        )
+        i2 = UserSpotInteraction.objects.create(
+            user=self.user,
+            spot=self.spot2,
+            view_count=2,
+            total_view_duration=timedelta(minutes=8),
+        )
+        i3 = UserSpotInteraction.objects.create(
+            user=self.user,
+            spot=self.spot3,
+            view_count=1,
+            total_view_duration=timedelta(seconds=45),
+        )
+
+        UserSpotInteraction.objects.filter(pk=i1.pk).update(last_viewed_at=now - timedelta(hours=1))
+        UserSpotInteraction.objects.filter(pk=i2.pk).update(last_viewed_at=now - timedelta(days=2))
+        UserSpotInteraction.objects.filter(pk=i3.pk).update(last_viewed_at=now - timedelta(days=10))
+
+    def test_order_spots_by_relevance_without_history(self):
+        result = order_spots_by_relevance([self.spot1, self.spot2], self.other)
+        self.assertEqual(result.source, 'none')
+        self.assertEqual([spot.id for spot in result.spots], [self.spot1.id, self.spot2.id])
+
+    def test_order_spots_by_relevance_fallback(self):
+        result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
+        self.assertEqual(result.source, 'fallback')
+        ordered_ids = [spot.id for spot in result.spots]
+        self.assertEqual(ordered_ids[0], self.spot1.id)
+        self.assertIn(self.spot2.id, ordered_ids[1:])
+        self.assertEqual(result.scored_spot_ids, {self.spot1.id, self.spot2.id, self.spot3.id})
+
+    def test_order_spots_by_relevance_uses_api_scores_when_available(self):
+        with patch('spots.services.analytics._request_scores_from_openrouter') as mock_request:
+            mock_request.return_value = {
+                self.spot2.id: 92.0,
+                self.spot1.id: 75.0,
+            }
+            result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
+
+        self.assertEqual(result.source, 'api')
+        ordered_ids = [spot.id for spot in result.spots]
+        self.assertEqual(ordered_ids[0], self.spot2.id)
+        self.assertEqual(ordered_ids[1], self.spot1.id)

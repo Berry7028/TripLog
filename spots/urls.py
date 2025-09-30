@@ -15,6 +15,7 @@ urlpatterns = [
     path('spot/<int:spot_id>/', views.spot_detail, name='spot_detail'),
     path('spot/<int:spot_id>/favorite/', views.toggle_favorite, name='toggle_favorite'),
     path('spot/<int:spot_id>/review/', views.add_review, name='add_review'),
+    path('spot/<int:spot_id>/record-view/', views.record_spot_view, name='record_spot_view'),
     path('add/', views.add_spot, name='add_spot'),
 
     # APIエンドポイント

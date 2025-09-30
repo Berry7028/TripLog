@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Spot, Review, UserProfile, Tag
+from .models import Spot, Review, UserProfile, Tag, UserSpotInteraction
 
 
 @admin.register(Spot)
@@ -49,3 +49,10 @@ class UserProfileAdmin(admin.ModelAdmin):
 class TagAdmin(admin.ModelAdmin):
     list_display = ['name']
     search_fields = ['name']
+
+
+@admin.register(UserSpotInteraction)
+class UserSpotInteractionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'spot', 'view_count', 'total_view_duration', 'last_viewed_at']
+    list_filter = ['last_viewed_at']
+    search_fields = ['user__username', 'spot__title']
