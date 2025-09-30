@@ -224,6 +224,8 @@ def store_recommendation_scores(
         cleaned_scores.append(cleaned)
         scored_ids.append(spot_id)
 
+    source = arguments.get('source') or RecommendationJobLog.SOURCE_API
+
     metadata_payload = metadata.copy() if metadata else {}
     metadata_payload.update(
         {
@@ -235,11 +237,55 @@ def store_recommendation_scores(
         }
     )
 
+    persisted_ids: List[int] = []
+    saved_count = 0
+    missing_spot_ids: List[int] = []
+
+    if cleaned_scores:
+        spot_map = {
+            spot.id: spot
+            for spot in Spot.objects.filter(id__in=scored_ids)
+        }
+
+        scores_to_create: List[UserRecommendationScore] = []
+        for item in cleaned_scores:
+            spot = spot_map.get(item['spot_id'])
+            if spot is None:
+                missing_spot_ids.append(item['spot_id'])
+                continue
+
+            scores_to_create.append(
+                UserRecommendationScore(
+                    user=user,
+                    spot=spot,
+                    score=item['score'],
+                    source=source,
+                    reason=item.get('reason', ''),
+                )
+            )
+            persisted_ids.append(spot.id)
+
+        if scores_to_create:
+            with transaction.atomic():
+                UserRecommendationScore.objects.filter(user=user).delete()
+                UserRecommendationScore.objects.bulk_create(scores_to_create)
+            saved_count = len(scores_to_create)
+
+    persisted_ids = sorted(set(persisted_ids))
+    missing_spot_ids = sorted(set(missing_spot_ids))
+
+    metadata_payload.update(
+        {
+            'scores_saved': saved_count,
+            'missing_spot_ids': missing_spot_ids,
+        }
+    )
+
     log = RecommendationJobLog.objects.create(
         user=user,
-        source=(arguments.get('source') or RecommendationJobLog.SOURCE_API),
+        source=source,
         triggered_by=triggered_by,
-        scored_spot_ids=scored_ids,
+        scored_spot_ids=persisted_ids,
         metadata=metadata_payload,
     )
     return log
