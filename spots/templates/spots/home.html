@@ -15,7 +15,7 @@
                 <label for="sortMode" class="form-label mb-0">並び順</label>
                 <select id="sortMode" name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="recent" {% if sort_mode != 'relevance' %}selected{% endif %}>新着順</option>
-                    <option value="relevance" {% if sort_mode == 'relevance' %}selected{% endif %}>おすすめ順</option>
+                    <option value="relevance" {% if sort_mode == 'relevance' %}selected{% endif %}>おすすめ順(β)</option>
                 </select>
             </form>
 

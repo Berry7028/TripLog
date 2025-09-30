@@ -73,7 +73,7 @@ def home(request):
                 
                 recommendation_source = source_info
                 if source_info == 'api':
-                    recommendation_notice = 'AIが分析したおすすめ順で表示しています。'
+                    recommendation_notice = 'AIが分析したおすすめ順で表示しています。(beta)'
                 elif source_info == 'fallback':
                     recommendation_notice = '閲覧履歴をもとに推定したおすすめ順です。'
                 else:
