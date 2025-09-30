@@ -212,6 +212,19 @@ run_tests_interactive() {
     fi
 }
 
+run_migrations() {
+    print_header "マイグレーションを作成・適用します"
+    if ! run_manage_py makemigrations; then
+        print_error "makemigrations に失敗しました"
+        return 1
+    fi
+    if ! run_manage_py migrate; then
+        print_error "migrate に失敗しました"
+        return 1
+    fi
+    print_info "マイグレーションが完了しました"
+}
+
 # =========================
 # メニュー / CLI
 # =========================
@@ -228,6 +241,7 @@ show_menu() {
   5) 画面フロー図生成 (flow/generate_flow.py)
   6) テスト実行 (manage.py test)
   7) requirements.txt インストール (pip install -r requirements.txt)
+  8) マイグレーション実行 (makemigrations && migrate)
   0) 終了
 MENU
         read -r -p "番号を入力 > " choice
@@ -254,12 +268,15 @@ MENU
                 pip install -r requirements.txt
                 print_info "requirements.txt がインストールされました"
                 ;;
+            8)
+                run_migrations
+                ;;
             0)
                 print_info "終了します"
                 break
                 ;;
             *)
-                print_warning "0〜6の番号を入力してください"
+                print_warning "0〜8の番号を入力してください"
                 ;;
         esac
     done
@@ -278,6 +295,7 @@ command:
   flow [URL]  フロー図を生成 (URL省略時は http://127.0.0.1:8000/)
   test [ARGS] manage.py test を実行 (ARGS は任意指定)
   install_requirements requirements.txt をインストール
+  migrate     makemigrations && migrate を実行
   help        このメッセージを表示
 USAGE
 }
@@ -314,6 +332,9 @@ run_cli() {
         test)
             run_tests "$@"
             ;;
+        migrate)
+            run_migrations
+            ;;
         help|--help|-h)
             usage
             ;;
@@ -335,3 +356,4 @@ main() {
 }
 
 main "$@"
+
