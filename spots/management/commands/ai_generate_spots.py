@@ -14,9 +14,17 @@ from django.db import transaction
 from spots.models import Spot, Tag
 
 
-LMSTUDIO_DEFAULT_BASE = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-# Default to the requested Qwen model name; overridable via env.
-LMSTUDIO_DEFAULT_MODEL = os.environ.get("LMSTUDIO_MODEL", "qwen/qwen3-4b-2507")
+# Provider configurations
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "lmstudio").lower()
+
+if AI_PROVIDER == "openrouter":
+    DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
+    DEFAULT_MODEL = os.environ.get("OPENROUTER_RECOMMENDATION_MODEL", "x-ai/grok-4-fast:free")
+    API_KEY_ENV = "OPENROUTER_API_KEY"
+else:  # lmstudio
+    DEFAULT_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+    DEFAULT_MODEL = os.environ.get("LMSTUDIO_MODEL", "qwen/qwen3-4b-2507")
+    API_KEY_ENV = "LMSTUDIO_API_KEY"
 
 
 @dataclass
@@ -177,23 +185,32 @@ def _parse_tool_calls(resp_json: Dict[str, Any]) -> List[ToolCall]:
     return tool_calls
 
 
-def _preflight_server(base_url: str, model: str) -> None:
+def _preflight_server(base_url: str, model: str, api_key: str) -> None:
     models_endpoint = f"{base_url}/models"
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key != "no-key" else {}
     try:
-        r = requests.get(models_endpoint, timeout=8)
+        r = requests.get(models_endpoint, headers=headers, timeout=8)
     except requests.exceptions.RequestException as e:
-        raise CommandError(
-            "LM Studio に接続できませんでした。\n"
-            f"- ベースURL: {models_endpoint}\n"
-            "- LM Studio の Local Server を起動し、OpenAI 互換APIを有効化してください。\n"
-            "- 例: LM Studio の Local Server ポートを 1234 に設定し、/v1 を有効化\n"
-            "- 別ポートの場合は環境変数 LMSTUDIO_BASE_URL を変更してください\n"
-            f"詳細: {e}"
-        ) from e
+        if AI_PROVIDER == "openrouter":
+            raise CommandError(
+                "OpenRouter に接続できませんでした。\n"
+                f"- ベースURL: {models_endpoint}\n"
+                "- OPENROUTER_API_KEY が正しく設定されているか確認してください。\n"
+                f"詳細: {e}"
+            ) from e
+        else:
+            raise CommandError(
+                "LM Studio に接続できませんでした。\n"
+                f"- ベースURL: {models_endpoint}\n"
+                "- LM Studio の Local Server を起動し、OpenAI 互換APIを有効化してください。\n"
+                "- 例: LM Studio の Local Server ポートを 1234 に設定し、/v1 を有効化\n"
+                "- 別ポートの場合は環境変数 LMSTUDIO_BASE_URL を変更してください\n"
+                f"詳細: {e}"
+            ) from e
 
     if not r.ok:
         raise CommandError(
-            f"LM Studio /models 応答が不正です: HTTP {r.status_code} - {r.text[:200]}"
+            f"{AI_PROVIDER.upper()} /models 応答が不正です: HTTP {r.status_code} - {r.text[:200]}"
         )
     try:
         data = r.json()
@@ -208,17 +225,25 @@ def _preflight_server(base_url: str, model: str) -> None:
 
     if model not in ids:
         preview = ", ".join(ids[:10]) or "(なし)"
-        raise CommandError(
-            "指定したモデルが LM Studio 側で見つかりません。\n"
-            f"- 指定モデル: {model}\n"
-            f"- 利用可能: {preview}\n"
-            "LM Studio で当該モデルをダウンロード・ロードしてから再実行してください。\n"
-            "モデルIDは Local Server の /models に表示される文字列と一致させてください。"
-        )
+        if AI_PROVIDER == "openrouter":
+            raise CommandError(
+                "指定したモデルが OpenRouter 側で見つかりません。\n"
+                f"- 指定モデル: {model}\n"
+                f"- 利用可能: {preview}\n"
+                "OPENROUTER_RECOMMENDATION_MODEL を確認してください。"
+            )
+        else:
+            raise CommandError(
+                "指定したモデルが LM Studio 側で見つかりません。\n"
+                f"- 指定モデル: {model}\n"
+                f"- 利用可能: {preview}\n"
+                "LM Studio で当該モデルをダウンロード・ロードしてから再実行してください。\n"
+                "モデルIDは Local Server の /models に表示される文字列と一致させてください。"
+            )
 
 
 class Command(BaseCommand):
-    help = "Generate Spot records using an LM Studio tool-calling model."
+    help = "Generate Spot records using LM Studio or OpenRouter tool-calling model."
 
     def add_arguments(self, parser):
         # Accept only one positional argument: count
@@ -233,25 +258,25 @@ class Command(BaseCommand):
         # Defaults: minimal required by user. Theme kept internal and simple.
         theme = "日本国内のおすすめ観光スポット"
         username = "ai"
-        model = LMSTUDIO_DEFAULT_MODEL
-        base_url = LMSTUDIO_DEFAULT_BASE.rstrip("/")
+        model = DEFAULT_MODEL
+        base_url = DEFAULT_BASE_URL.rstrip("/")
+        api_key = os.environ.get(API_KEY_ENV, "no-key")
         max_rounds = 6
 
         if count <= 0:
             raise CommandError("count must be >= 1")
         if not model:
-            raise CommandError("Model name is empty. Set LMSTUDIO_MODEL env.")
+            raise CommandError("Model name is empty. Set the appropriate model env var.")
 
         user = _ensure_user(username)
 
         # Preflight: server reachable and model available
-        _preflight_server(base_url, model)
+        _preflight_server(base_url, model, api_key)
 
         chat_endpoint = f"{base_url}/chat/completions"
         headers = {
-            # LM Studio usually ignores auth; keep header for API compatibility
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {os.environ.get('LMSTUDIO_API_KEY', 'no-key')}",
+            "Authorization": f"Bearer {api_key}",
         }
 
         system_prompt = (
@@ -283,7 +308,7 @@ class Command(BaseCommand):
         created = 0
         round_idx = 0
         self.stdout.write(self.style.NOTICE(
-            f"Requesting model '{model}' at {base_url} to create {count} spot(s)..."
+            f"Requesting {AI_PROVIDER.upper()} model '{model}' at {base_url} to create {count} spot(s)..."
         ))
 
         while created < count and round_idx < max_rounds:
@@ -301,12 +326,20 @@ class Command(BaseCommand):
                     chat_endpoint, headers=headers, json=payload, timeout=120
                 )
             except requests.exceptions.RequestException as e:
-                raise CommandError(
-                    "LM Studio へのリクエストに失敗しました。\n"
-                    f"- エンドポイント: {chat_endpoint}\n"
-                    "- Local Server が起動し、指定モデルがロード済みか確認してください。\n"
-                    f"詳細: {e}"
-                ) from e
+                if AI_PROVIDER == "openrouter":
+                    raise CommandError(
+                        "OpenRouter へのリクエストに失敗しました。\n"
+                        f"- エンドポイント: {chat_endpoint}\n"
+                        "- OPENROUTER_API_KEY が正しく設定されているか確認してください。\n"
+                        f"詳細: {e}"
+                    ) from e
+                else:
+                    raise CommandError(
+                        "LM Studio へのリクエストに失敗しました。\n"
+                        f"- エンドポイント: {chat_endpoint}\n"
+                        "- Local Server が起動し、指定モデルがロード済みか確認してください。\n"
+                        f"詳細: {e}"
+                    ) from e
             if not resp.ok:
                 raise CommandError(f"LM Studio error: HTTP {resp.status_code} - {resp.text[:200]}")
 
