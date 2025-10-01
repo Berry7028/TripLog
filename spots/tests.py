@@ -57,17 +57,36 @@ class SpotImageSrcTests(TestCase):
 
 
 class SpotImageProviderTests(TestCase):
-    def test_fallback_uses_source_url_without_api_key(self):
-        with override_settings(UNSPLASH_ACCESS_KEY=None, UNSPLASH_DEFAULT_ORIENTATION='landscape'):
+    def test_fallback_uses_static_unsplash_when_source_disabled(self):
+        with override_settings(
+            UNSPLASH_ACCESS_KEY=None,
+            UNSPLASH_USE_SOURCE=False,
+            UNSPLASH_FALLBACK_QUERY='旅行',
+        ):
+            url = get_spot_fallback_image('渋谷 スカイ')
+
+        self.assertTrue(url.startswith('https://images.unsplash.com/'))
+        self.assertNotIn('source.unsplash.com', url)
+        self.assertIn('utm_source=TripLog', url)
+
+    def test_fallback_uses_source_url_when_enabled(self):
+        with override_settings(
+            UNSPLASH_ACCESS_KEY=None,
+            UNSPLASH_USE_SOURCE=True,
+            UNSPLASH_DEFAULT_ORIENTATION='landscape',
+        ):
             url = get_spot_fallback_image('渋谷 スカイ')
 
         self.assertTrue(url.startswith('https://source.unsplash.com/featured/'))
         self.assertIn(quote_plus('渋谷 スカイ'), url)
         self.assertIn('orientation=landscape', url)
 
-    def test_fallback_returns_none_when_no_query_available(self):
+    def test_fallback_returns_static_image_when_no_query_available(self):
         with override_settings(UNSPLASH_ACCESS_KEY=None, UNSPLASH_FALLBACK_QUERY=''):
-            self.assertIsNone(get_spot_fallback_image(''))
+            url = get_spot_fallback_image('')
+
+        self.assertTrue(url.startswith('https://images.unsplash.com/'))
+        self.assertIn('utm_medium=referral', url)
 
 
 class SpotsApiTests(TestCase):
@@ -544,7 +563,8 @@ class RecommendationServiceTests(TestCase):
         self.assertEqual([spot.id for spot in result.spots], [self.spot1.id, self.spot2.id])
 
     def test_order_spots_by_relevance_fallback(self):
-        result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
+        with override_settings(OPENROUTER_API_KEY=None):
+            result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
         self.assertEqual(result.source, 'fallback')
         ordered_ids = [spot.id for spot in result.spots]
         self.assertEqual(ordered_ids[0], self.spot1.id)
