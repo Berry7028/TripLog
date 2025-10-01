@@ -1,14 +1,16 @@
 import tempfile
 from datetime import timedelta
 from unittest.mock import patch
+from urllib.parse import quote_plus
 
 from django.contrib.auth.models import Group, Permission, User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from .forms import SpotForm
+from .image_providers import get_spot_fallback_image
 from .models import Review, Spot, SpotView, Tag, UserProfile, UserSpotInteraction
 from .services import order_spots_by_relevance
 
@@ -41,8 +43,31 @@ class SpotImageSrcTests(TestCase):
         self.assertEqual(spot.image_src, 'https://example.com/external.jpg')
 
     def test_image_src_returns_empty_string_when_no_image(self):
-        spot = self.create_spot()
-        self.assertEqual(spot.image_src, '')
+        with patch('spots.image_providers.get_spot_fallback_image', return_value=None) as mocked:
+            spot = self.create_spot()
+            self.assertEqual(spot.image_src, '')
+            mocked.assert_called_once_with(spot.title)
+
+    def test_image_src_uses_unsplash_fallback(self):
+        fallback_url = 'https://images.unsplash.com/photo-123456'
+        with patch('spots.image_providers.get_spot_fallback_image', return_value=fallback_url) as mocked:
+            spot = self.create_spot()
+            self.assertEqual(spot.image_src, fallback_url)
+            mocked.assert_called_once_with(spot.title)
+
+
+class SpotImageProviderTests(TestCase):
+    def test_fallback_uses_source_url_without_api_key(self):
+        with override_settings(UNSPLASH_ACCESS_KEY=None, UNSPLASH_DEFAULT_ORIENTATION='landscape'):
+            url = get_spot_fallback_image('渋谷 スカイ')
+
+        self.assertTrue(url.startswith('https://source.unsplash.com/featured/'))
+        self.assertIn(quote_plus('渋谷 スカイ'), url)
+        self.assertIn('orientation=landscape', url)
+
+    def test_fallback_returns_none_when_no_query_available(self):
+        with override_settings(UNSPLASH_ACCESS_KEY=None, UNSPLASH_FALLBACK_QUERY=''):
+            self.assertIsNone(get_spot_fallback_image(''))
 
 
 class SpotsApiTests(TestCase):
@@ -98,7 +123,8 @@ class SpotsApiTests(TestCase):
         spot_payload = data['spots'][0]
         self.assertEqual(spot_payload['id'], self.other_spot.id)
         self.assertEqual(spot_payload['created_by'], self.other_user.username)
-        self.assertIsNone(spot_payload['image'])
+        self.assertTrue(spot_payload['image'])
+        self.assertTrue(spot_payload['image'].startswith('https://'))
         self.assertEqual(spot_payload['tags'], [self.tag_other.name])
 
     def test_spots_api_ignores_filter_when_anonymous(self):

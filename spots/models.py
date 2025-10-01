@@ -48,14 +48,28 @@ class Spot(models.Model):
 
     @property
     def image_src(self) -> str:
-        """アップロード画像のURLがあれば優先し、なければ外部の画像URLを返す"""
+        """利用可能な画像の URL を返す。なければ Unsplash から取得を試みる。"""
         if self.image:
             try:
                 return self.image.url
             except Exception:
                 # 画像が未設定の場合、Djangoはurlアクセスで例外を投げることがある
                 pass
-        return self.image_url or ''
+
+        if self.image_url:
+            return self.image_url
+
+        try:
+            from .image_providers import get_spot_fallback_image
+
+            fallback_url = get_spot_fallback_image(self.title)
+            if fallback_url:
+                return fallback_url
+        except Exception:
+            # 外部サービスの失敗は無視して空文字を返す
+            pass
+
+        return ''
 
 
 class Review(models.Model):

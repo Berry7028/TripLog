@@ -191,3 +191,9 @@ OPENROUTER_RECOMMENDATION_URL = os.environ.get(
 OPENROUTER_TIMEOUT = _env_int('OPENROUTER_TIMEOUT', 15)
 OPENROUTER_SITE_URL = os.environ.get('OPENROUTER_SITE_URL', 'https://triplog.example.com')
 OPENROUTER_APP_NAME = os.environ.get('OPENROUTER_APP_NAME', 'TripLog Recommendations')
+
+# Unsplash 設定
+UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY')
+UNSPLASH_DEFAULT_ORIENTATION = os.environ.get('UNSPLASH_DEFAULT_ORIENTATION', 'landscape')
+UNSPLASH_TIMEOUT = _env_int('UNSPLASH_TIMEOUT', 5)
+UNSPLASH_FALLBACK_QUERY = os.environ.get('UNSPLASH_FALLBACK_QUERY', 'travel')

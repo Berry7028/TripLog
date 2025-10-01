@@ -96,7 +96,7 @@ function addSpotMarker(spot) {
 function showSpotInfo(spot) {
     const content = `
         <div class="text-center mb-3">
-            ${spot.image ? `<img src="${spot.image}" alt="${spot.title}" class="img-fluid rounded" style="max-height: 200px;">` : '<i class="fas fa-image fa-3x text-muted"></i>'}
+            ${spot.image ? `<img src="${spot.image}" alt="${spot.title}" class="img-fluid rounded" style="max-height: 200px;">` : '<p class="text-muted mb-0">画像がありません</p>'}
         </div>
         <h5>${spot.title}</h5>
         <p>${spot.description}</p>

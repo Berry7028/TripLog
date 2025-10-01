@@ -8,8 +8,13 @@
     <div class="col-md-8">
         <div class="card">
             {% if spot.image_src %}
-            <img src="{{ spot.image_src }}" class="card-img-top spot-hero" alt="{{ spot.title }}" 
+            <img src="{{ spot.image_src }}" class="card-img-top spot-hero" alt="{{ spot.title }}"
                  style="height: 400px; object-fit: cover;">
+            {% else %}
+            <div class="card-img-top spot-hero d-flex align-items-center justify-content-center bg-light text-muted"
+                 style="height: 400px;">
+                画像がありません
+            </div>
             {% endif %}
             
             <div class="card-body">

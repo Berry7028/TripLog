@@ -353,7 +353,7 @@ def spots_api(request):
             'latitude': spot.latitude,
             'longitude': spot.longitude,
             'address': spot.address,
-            'image': (spot.image.url if spot.image else (spot.image_url or None)),
+            'image': (spot.image_src or None),
             'created_by': spot.created_by.username,
             'created_at': spot.created_at.isoformat(),
             'tags': [t.name for t in spot.tags.all()],
@@ -411,7 +411,7 @@ def add_spot_api(request):
                 'latitude': spot.latitude,
                 'longitude': spot.longitude,
                 'address': spot.address,
-                'image': (spot.image.url if spot.image else (spot.image_url or None)),
+                'image': (spot.image_src or None),
                 'created_by': spot.created_by.username,
                 'created_at': spot.created_at.isoformat(),
             }

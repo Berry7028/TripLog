@@ -20,6 +20,11 @@
             </div>
             {% if spot.image_src %}
               <img src="{{ spot.image_src }}" alt="{{ spot.title }}" class="me-3 rounded" style="width: 72px; height: 72px; object-fit: cover;">
+            {% else %}
+              <div class="me-3 rounded bg-light text-muted d-flex align-items-center justify-content-center"
+                   style="width: 72px; height: 72px;">
+                画像がありません
+              </div>
             {% endif %}
             <div class="flex-grow-1">
               <h5 class="mb-1"><a href="{% url 'spot_detail' spot.id %}" class="text-decoration-none">{{ spot.title }}</a></h5>
