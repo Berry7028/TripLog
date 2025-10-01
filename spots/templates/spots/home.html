@@ -7,6 +7,25 @@
     <div class="col-12">
         <h2 class="section-title">いちらん</h2>
 
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+            <form method="get" class="d-flex align-items-center gap-2">
+                {% if search_query %}
+                <input type="hidden" name="search" value="{{ search_query }}">
+                {% endif %}
+                <label for="sortMode" class="form-label mb-0">並び順</label>
+                <select id="sortMode" name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="recent" {% if sort_mode != 'relevance' %}selected{% endif %}>新着順</option>
+                    <option value="relevance" {% if sort_mode == 'relevance' %}selected{% endif %}>おすすめ順(β)</option>
+                </select>
+            </form>
+
+            {% if recommendation_notice %}
+            <div class="alert alert-info mb-0 py-2 px-3 small">
+                <i class="fas fa-info-circle me-1"></i>{{ recommendation_notice }}
+            </div>
+            {% endif %}
+        </div>
+
         {% if search_query %}
         <div class="alert alert-info">
             <i class="fas fa-search me-2"></i>「{{ search_query }}」の検索結果: {{ page_obj.paginator.count }}件
@@ -28,6 +47,9 @@
 
                     <div class="spot-info d-flex flex-column">
                         <h5 class="spot-title">{{ spot.title }}</h5>
+                        {% if sort_mode == 'relevance' and spot.id in recommendation_scored_ids %}
+                        <span class="badge bg-warning text-dark align-self-start mb-2">AIおすすめ</span>
+                        {% endif %}
                         <p class="spot-desc mb-2">{{ spot.description|truncatechars:70 }}</p>
                         {% if spot.tags.all %}
                         <div class="mb-2">
@@ -54,10 +76,10 @@
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">最初</a>
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_mode %}&sort={{ sort_mode }}{% endif %}">最初</a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">前へ</a>
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_mode %}&sort={{ sort_mode }}{% endif %}">前へ</a>
                 </li>
                 {% endif %}
 
@@ -67,10 +89,10 @@
 
                 {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">次へ</a>
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_mode %}&sort={{ sort_mode }}{% endif %}">次へ</a>
                 </li>
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">最後</a>
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_mode %}&sort={{ sort_mode }}{% endif %}">最後</a>
                 </li>
                 {% endif %}
             </ul>

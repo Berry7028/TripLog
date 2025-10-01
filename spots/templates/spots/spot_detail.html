@@ -251,4 +251,53 @@ document.addEventListener('DOMContentLoaded', function() {
         .openPopup();
 });
 </script>
+
+<script>
+(function() {
+    if (!{{ user.is_authenticated|yesno:'true,false' }}) {
+        return;
+    }
+
+    const viewStart = Date.now();
+    let hasSent = false;
+
+    function getCookie(name) {
+        const value = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)');
+        return value ? decodeURIComponent(value[1]) : null;
+    }
+
+    function sendDuration() {
+        if (hasSent) {
+            return;
+        }
+        hasSent = true;
+
+        const durationMs = Math.max(Date.now() - viewStart, 0);
+        const url = "{% url 'record_spot_view' spot.id %}";
+        const formData = new FormData();
+        formData.append('duration_ms', durationMs.toString());
+        const csrfToken = getCookie('csrftoken');
+        if (csrfToken) {
+            formData.append('csrfmiddlewaretoken', csrfToken);
+        }
+
+        if (navigator.sendBeacon) {
+            navigator.sendBeacon(url, formData);
+        } else {
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+            }).catch(() => {});
+        }
+    }
+
+    window.addEventListener('pagehide', sendDuration);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            sendDuration();
+        }
+    });
+})();
+</script>
 {% endblock %}

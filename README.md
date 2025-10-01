@@ -6,6 +6,10 @@ Render.com にデプロイされた Django ベースの旅行ログマッピン�
 
 - 旅行スポットを探索できるインタラクティブマップ
 - ユーザー認証と旅行ログの共有機能
+- **AIベースのパーソナライズドおすすめ機能** (新機能!)
+  - ユーザーの閲覧履歴を分析して最適なスポットを提案
+  - バックグラウンドで1時間ごとにスコアを更新
+  - 未閲覧のスポットも関連性に基づいて推薦
 - 本番デプロイ時の自動スーパーユーザー作成
 - デプロイ後セットアップの自動化
 
@@ -76,9 +80,61 @@ python manage.py runserver
 
 ### スクリプト
 
-- `start.sh`: 本番環境向けの起動スクリプト（デプロイ後セットアップ込み）
+- `start.sh`: 本番環境向けの起動スクリプト(デプロイ後セットアップ込み)
 - `post_deploy.sh`: 環境変数を用いたスーパーユーザー自動作成スクリプト
+- `scripts/run_recommendation_jobs.sh`: AIおすすめ解析バッチジョブ
 - 開発用スクリプトは `scripts/` ディレクトリを参照
+
+## AIおすすめ機能
+
+### 概要
+
+ユーザーの閲覧履歴を分析し、パーソナライズされたスポット推薦を提供します。
+
+### 仕組み
+
+1. **バックグラウンド解析**: 1時間ごとに全ユーザーの閲覧データを分析
+2. **AIスコアリング**: OpenRouter API を使用して各スポットにスコアを付与
+3. **DB保存**: 計算結果をデータベースに保存し、即座に表示可能
+4. **未閲覧スポット推薦**: ユーザーが見ていないスポットも関連性に基づいて推薦
+
+### 設定
+
+環境変数に以下を設定してください:
+
+```bash
+OPENROUTER_API_KEY=your_api_key_here
+OPENROUTER_RECOMMENDATION_MODEL=openai/gpt-4o-mini  # 任意
+OPENROUTER_TIMEOUT=15  # 任意
+```
+
+### バックグラウンドジョブの実行
+
+```bash
+# 全ユーザーのスコアを計算(スケジュールに従う)
+python manage.py run_recommendation_jobs
+
+# 強制実行(スケジュール無視)
+python manage.py run_recommendation_jobs --force
+
+# 特定ユーザーのみ
+python manage.py run_recommendation_jobs --username=admin
+
+# シェルスクリプト経由
+bash scripts/run_recommendation_jobs.sh --force
+```
+
+### Cron設定例(1時間ごと)
+
+```bash
+0 * * * * cd /path/to/TripLog && python manage.py run_recommendation_jobs
+```
+
+### 管理画面での確認
+
+- **おすすめ解析設定**: `/admin/spots/recommendationjobsetting/`
+- **解析ログ**: `/admin/spots/recommendationjoblog/`
+- **ユーザースコア**: `/admin/spots/userrecommendationscore/`
 
 ## 技術スタック
 

@@ -29,7 +29,8 @@ from .forms import (
     UserAdminForm,
     UserProfileAdminForm,
 )
-from .models import Review, Spot, SpotView, Tag, UserProfile
+from .models import Review, Spot, SpotView, Tag, UserProfile, RecommendationJobSetting, UserRecommendationScore, RecommendationJobLog
+from .services import compute_and_store_all_user_scores
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -84,6 +85,7 @@ class AdminDashboardView(StaffRequiredMixin, TemplateView):
                 'total_users': User.objects.count(),
                 'total_tags': Tag.objects.count(),
                 'views_last_week': SpotView.objects.filter(viewed_at__gte=week_ago).count(),
+                'ai_scores_count': UserRecommendationScore.objects.count(),
                 'new_spots': Spot.objects.select_related('created_by')
                 .prefetch_related('tags')
                 .order_by('-created_at')[:5],
@@ -607,4 +609,204 @@ class SpotViewAdminListView(StaffRequiredMixin, ListView):
                 'date_to': self.request.GET.get('date_to', ''),
             }
         )
+        return context
+
+
+class RecommendationAdminView(StaffRequiredMixin, TemplateView):
+    """AIおすすめ解析の管理画面"""
+    template_name = 'spots/admin/recommendation_dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 設定情報を取得
+        from .services import get_or_create_job_setting
+        setting = get_or_create_job_setting()
+        
+        # 統計情報
+        total_scores = UserRecommendationScore.objects.count()
+        users_with_scores = UserRecommendationScore.objects.values('user').distinct().count()
+        recent_logs = RecommendationJobLog.objects.select_related('user').order_by('-executed_at')[:10]
+        
+        # ユーザー別のスコア数
+        from django.db.models import Count
+        user_score_stats = UserRecommendationScore.objects.values(
+            'user__username', 'user__id'
+        ).annotate(
+            score_count=Count('id')
+        ).order_by('-score_count')[:10]
+        
+        context.update({
+            'setting': setting,
+            'total_scores': total_scores,
+            'users_with_scores': users_with_scores,
+            'recent_logs': recent_logs,
+            'user_score_stats': user_score_stats,
+        })
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action')
+        
+        if action == 'run_all':
+            # 全ユーザーのスコア計算を実行
+            try:
+                result = compute_and_store_all_user_scores(
+                    triggered_by=RecommendationJobLog.TRIGGER_ADMIN
+                )
+                if result['success']:
+                    messages.success(
+                        request,
+                        f'✓ {result["users_processed"]}ユーザーを処理し、'
+                        f'{result["scores_saved"]}件のスコアを保存しました。'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'一部エラーが発生しました: {len(result.get("errors", []))}件'
+                    )
+            except Exception as e:
+                messages.error(request, f'エラーが発生しました: {str(e)}')
+        
+        elif action == 'update_setting':
+            # 設定を更新
+            from .services import get_or_create_job_setting
+            setting = get_or_create_job_setting()
+            interval_hours = request.POST.get('interval_hours')
+            enabled = request.POST.get('enabled') == 'on'
+            
+            try:
+                setting.interval_hours = int(interval_hours)
+                setting.enabled = enabled
+                setting.save()
+                messages.success(request, '設定を更新しました。')
+            except ValueError:
+                messages.error(request, '間隔は数値で入力してください。')
+        
+        return redirect('admin_recommendation')
+
+
+class RecommendationUserScoreListView(StaffRequiredMixin, ListView):
+    """ユーザー別のおすすめスコア一覧"""
+    template_name = 'spots/admin/recommendation_scores.html'
+    model = UserRecommendationScore
+    context_object_name = 'scores'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        queryset = UserRecommendationScore.objects.select_related(
+            'user', 'spot'
+        ).order_by('-score', '-updated_at')
+        
+        user_id = self.request.GET.get('user')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        
+        spot_id = self.request.GET.get('spot')
+        if spot_id:
+            queryset = queryset.filter(spot_id=spot_id)
+        
+        source = self.request.GET.get('source')
+        if source:
+            queryset = queryset.filter(source=source)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'users': User.objects.order_by('username'),
+            'spots': Spot.objects.order_by('title'),
+            'selected_user': self.request.GET.get('user', ''),
+            'selected_spot': self.request.GET.get('spot', ''),
+            'selected_source': self.request.GET.get('source', ''),
+            'source_choices': ['api', 'fallback', 'manual'],
+        })
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action')
+        
+        if action == 'delete_selected':
+            selected_ids = request.POST.getlist('selected')
+            if selected_ids:
+                deleted_count, _ = UserRecommendationScore.objects.filter(
+                    pk__in=selected_ids
+                ).delete()
+                messages.success(request, f'{deleted_count}件のスコアを削除しました。')
+            else:
+                messages.warning(request, '削除対象が選択されていません。')
+        
+        elif action == 'delete_user_scores':
+            user_id = request.POST.get('user_id')
+            if user_id:
+                deleted_count, _ = UserRecommendationScore.objects.filter(
+                    user_id=user_id
+                ).delete()
+                messages.success(request, f'{deleted_count}件のスコアを削除しました。')
+        
+        elif action == 'recalculate_user':
+            user_id = request.POST.get('user_id')
+            if user_id:
+                from .services import run_recommendation_for_user
+                user = User.objects.filter(id=user_id).first()
+                if user:
+                    try:
+                        from .models import Spot
+                        all_spots = list(Spot.objects.all().prefetch_related('tags'))
+                        from .services.recommendation_jobs import _compute_and_store_user_scores
+                        result = _compute_and_store_user_scores(
+                            user=user,
+                            all_spots=all_spots,
+                            triggered_by=RecommendationJobLog.TRIGGER_ADMIN
+                        )
+                        if result:
+                            messages.success(
+                                request,
+                                f'{user.username} のスコアを再計算しました: '
+                                f'{result["scores_saved"]}件保存'
+                            )
+                        else:
+                            messages.warning(request, f'{user.username} の閲覧履歴がありません。')
+                    except Exception as e:
+                        messages.error(request, f'エラー: {str(e)}')
+        
+        return redirect(request.path + '?' + request.GET.urlencode())
+
+
+class RecommendationJobLogListView(StaffRequiredMixin, ListView):
+    """AIおすすめ解析の実行ログ一覧"""
+    template_name = 'spots/admin/recommendation_logs.html'
+    model = RecommendationJobLog
+    context_object_name = 'logs'
+    paginate_by = 50
+    ordering = ['-executed_at']
+    
+    def get_queryset(self):
+        queryset = RecommendationJobLog.objects.select_related('user').order_by('-executed_at')
+        
+        user_id = self.request.GET.get('user')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        
+        source = self.request.GET.get('source')
+        if source:
+            queryset = queryset.filter(source=source)
+        
+        triggered_by = self.request.GET.get('triggered_by')
+        if triggered_by:
+            queryset = queryset.filter(triggered_by=triggered_by)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'users': User.objects.order_by('username'),
+            'selected_user': self.request.GET.get('user', ''),
+            'selected_source': self.request.GET.get('source', ''),
+            'selected_triggered_by': self.request.GET.get('triggered_by', ''),
+            'source_choices': RecommendationJobLog.SOURCE_CHOICES,
+            'trigger_choices': RecommendationJobLog.TRIGGER_CHOICES,
+        })
         return context

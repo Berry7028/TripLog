@@ -9,6 +9,16 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+
+def _env_int(name: str, default: int) -> int:
+    """環境変数を整数として取得。変換できない場合はデフォルト値。"""
+
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
 
 # dj_database_url is only needed for production deployment
 try:
@@ -18,6 +28,13 @@ except ImportError:
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env and .env.local
+load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env.local')
+
+# Load environment variables from .env.local
+load_dotenv(BASE_DIR / '.env.local')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -163,3 +180,14 @@ CSRF_TRUSTED_ORIGINS = [
     'https://8001-ij3w7fliisck5f9nvstl9-41315974.manusvm.computer',
     'https://*.manusvm.computer',
 ]
+
+# OpenRouter (AI レコメンド) 設定
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
+OPENROUTER_RECOMMENDATION_MODEL = os.environ.get('OPENROUTER_RECOMMENDATION_MODEL', 'openai/gpt-4o-mini')
+OPENROUTER_RECOMMENDATION_URL = os.environ.get(
+    'OPENROUTER_RECOMMENDATION_URL',
+    'https://openrouter.ai/api/v1/chat/completions',
+)
+OPENROUTER_TIMEOUT = _env_int('OPENROUTER_TIMEOUT', 15)
+OPENROUTER_SITE_URL = os.environ.get('OPENROUTER_SITE_URL', 'https://triplog.example.com')
+OPENROUTER_APP_NAME = os.environ.get('OPENROUTER_APP_NAME', 'TripLog Recommendations')

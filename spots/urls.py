@@ -15,6 +15,7 @@ urlpatterns = [
     path('spot/<int:spot_id>/', views.spot_detail, name='spot_detail'),
     path('spot/<int:spot_id>/favorite/', views.toggle_favorite, name='toggle_favorite'),
     path('spot/<int:spot_id>/review/', views.add_review, name='add_review'),
+    path('spot/<int:spot_id>/record-view/', views.record_spot_view, name='record_spot_view'),
     path('add/', views.add_spot, name='add_spot'),
 
     # APIエンドポイント
@@ -50,4 +51,9 @@ urlpatterns = [
     path('manage/groups/<int:pk>/delete/', admin_views.GroupAdminDeleteView.as_view(), name='admin_group_delete'),
     path('manage/profiles/', admin_views.UserProfileAdminListView.as_view(), name='admin_profile_list'),
     path('manage/spot-views/', admin_views.SpotViewAdminListView.as_view(), name='admin_spotview_list'),
+    
+    # AIおすすめ管理
+    path('manage/recommendations/', admin_views.RecommendationAdminView.as_view(), name='admin_recommendation'),
+    path('manage/recommendations/scores/', admin_views.RecommendationUserScoreListView.as_view(), name='admin_recommendation_scores'),
+    path('manage/recommendations/logs/', admin_views.RecommendationJobLogListView.as_view(), name='admin_recommendation_logs'),
 ]
