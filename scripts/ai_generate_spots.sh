@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AIスポット生成スクリプト
-# LM Studioを使用してAIが観光スポットを自動生成し、サーバーを起動します
+# OpenRouterまたはLM Studioを使用してAIが観光スポットを自動生成し、サーバーを起動します
 
 set -e
 
@@ -29,6 +29,12 @@ print_header() {
 # プロジェクトのルートディレクトリに移動
 cd "$(dirname "$0")/.."
 
+# 環境変数ファイルの読み込み
+if [ -f ".env.local" ]; then
+    print_info "環境変数ファイルを読み込んでいます..."
+    export $(grep -v '^#' .env.local | xargs)
+fi
+
 print_header "AIスポット生成モード"
 echo ""
 
@@ -49,29 +55,82 @@ if ! python -c "import django" 2>/dev/null; then
     exit 1
 fi
 
-# LM Studioの接続確認
-print_info "LM Studioの接続を確認しています..."
-LMSTUDIO_BASE_URL=${LMSTUDIO_BASE_URL:-"http://localhost:1234/v1"}
-LMSTUDIO_MODEL=${LMSTUDIO_MODEL:-"qwen/qwen3-4b-2507"}
+# AIプロバイダーの選択
+echo ""
+print_info "使用するAIプロバイダーを選択してください:"
+echo "1) OpenRouter (推奨 - クラウドAPI)"
+echo "2) LM Studio (ローカル)"
+echo ""
 
-if ! curl -s --connect-timeout 5 "$LMSTUDIO_BASE_URL/models" > /dev/null 2>&1; then
-    print_warning "LM Studioに接続できません。"
-    echo ""
-    print_info "LM Studioの設定:"
-    print_info "1. LM Studioを起動"
-    print_info "2. Local Serverを開始"
-    print_info "3. OpenAI互換APIを有効化"
-    print_info "4. ポート1234でサーバーを起動"
-    print_info "5. モデル '$LMSTUDIO_MODEL' をロード"
-    echo ""
-    print_info "環境変数の設定:"
-    print_info "export LMSTUDIO_BASE_URL='http://localhost:1234/v1'"
-    print_info "export LMSTUDIO_MODEL='qwen/qwen3-4b-2507'"
-    echo ""
-    read -p "LM Studioの準備ができましたか？ (y/N): " lmstudio_ready
-    if [[ ! "$lmstudio_ready" =~ ^[Yy]$ ]]; then
-        print_info "LM Studioの準備ができたら再度実行してください。"
-        exit 0
+while true; do
+    read -p "選択してください (1-2): " provider_choice
+    case $provider_choice in
+        1)
+            AI_PROVIDER="openrouter"
+            PROVIDER_NAME="OpenRouter"
+            break
+            ;;
+        2)
+            AI_PROVIDER="lmstudio"
+            PROVIDER_NAME="LM Studio"
+            break
+            ;;
+        *)
+            print_warning "無効な選択です。1または2を入力してください。"
+            ;;
+    esac
+done
+
+# 環境変数の設定
+export AI_PROVIDER="$AI_PROVIDER"
+
+# プロバイダー固有の設定と確認
+if [ "$AI_PROVIDER" = "openrouter" ]; then
+    print_info "OpenRouterの設定を確認しています..."
+    
+    if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+        print_error "OPENROUTER_API_KEYが設定されていません。"
+        echo ""
+        print_info "環境変数の設定方法:"
+        print_info "export OPENROUTER_API_KEY='your-api-key-here'"
+        echo ""
+        print_info "APIキーは https://openrouter.ai/keys から取得できます。"
+        exit 1
+    fi
+    
+    OPENROUTER_MODEL=${OPENROUTER_RECOMMENDATION_MODEL:-"x-ai/grok-4-fast:free"}
+    export OPENROUTER_RECOMMENDATION_MODEL="$OPENROUTER_MODEL"
+    
+    print_info "OpenRouter APIキーが設定されています。"
+    print_info "モデル: $OPENROUTER_MODEL"
+    
+elif [ "$AI_PROVIDER" = "lmstudio" ]; then
+    print_info "LM Studioの接続を確認しています..."
+    LMSTUDIO_BASE_URL=${LMSTUDIO_BASE_URL:-"http://localhost:1234/v1"}
+    LMSTUDIO_MODEL=${LMSTUDIO_MODEL:-"qwen/qwen3-4b-2507"}
+    
+    export LMSTUDIO_BASE_URL="$LMSTUDIO_BASE_URL"
+    export LMSTUDIO_MODEL="$LMSTUDIO_MODEL"
+    
+    if ! curl -s --connect-timeout 5 "$LMSTUDIO_BASE_URL/models" > /dev/null 2>&1; then
+        print_warning "LM Studioに接続できません。"
+        echo ""
+        print_info "LM Studioの設定:"
+        print_info "1. LM Studioを起動"
+        print_info "2. Local Serverを開始"
+        print_info "3. OpenAI互換APIを有効化"
+        print_info "4. ポート1234でサーバーを起動"
+        print_info "5. モデル '$LMSTUDIO_MODEL' をロード"
+        echo ""
+        print_info "環境変数の設定:"
+        print_info "export LMSTUDIO_BASE_URL='http://localhost:1234/v1'"
+        print_info "export LMSTUDIO_MODEL='qwen/qwen3-4b-2507'"
+        echo ""
+        read -p "LM Studioの準備ができましたか？ (y/N): " lmstudio_ready
+        if [[ ! "$lmstudio_ready" =~ ^[Yy]$ ]]; then
+            print_info "LM Studioの準備ができたら再度実行してください。"
+            exit 0
+        fi
     fi
 fi
 
@@ -127,9 +186,17 @@ fi
 # AIスポット生成の実行
 echo ""
 print_info "AIスポット生成を開始します..."
+print_info "プロバイダー: $PROVIDER_NAME"
 print_info "生成数: $spot_count 個"
-print_info "モデル: $LMSTUDIO_MODEL"
-print_info "ベースURL: $LMSTUDIO_BASE_URL"
+
+if [ "$AI_PROVIDER" = "openrouter" ]; then
+    print_info "モデル: $OPENROUTER_MODEL"
+    print_info "API: OpenRouter"
+elif [ "$AI_PROVIDER" = "lmstudio" ]; then
+    print_info "モデル: $LMSTUDIO_MODEL"
+    print_info "ベースURL: $LMSTUDIO_BASE_URL"
+fi
+
 echo ""
 
 python manage.py ai_generate_spots "$spot_count"
