@@ -50,7 +50,7 @@ body { background: var(--page-cream); }
   width: 34px; height: 34px;
   border-radius: 50%;
   background: #ffffff22;
-  color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  color: #ffffff; display: inline-flex; align-items: center; justify-content: center;
 }
 
 /* Section title */

@@ -8,12 +8,12 @@
         <h2 class="section-title">いちらん</h2>
 
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
-            <form method="get" class="d-flex align-items-center gap-2">
+            <form method="get" class="d-flex align-items-center gap-3" style="margin-bottom:0;">
                 {% if search_query %}
                 <input type="hidden" name="search" value="{{ search_query }}">
                 {% endif %}
-                <label for="sortMode" class="form-label mb-0">並び順</label>
-                <select id="sortMode" name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+                <label for="sortMode" class="form-label mb-0" style="white-space:nowrap; font-weight:bold; font-size:1.05rem; color:#333;">並び順</label>
+                <select id="sortMode" name="sort" class="form-select" style="min-width:120px; border-radius:8px; border:1px solid #b0b0b0; font-size:1rem; padding:6px 16px; transition:border-color 0.2s; background:#fff;" onchange="this.form.submit()" onfocus="this.style.borderColor='#6B9080'" onblur="this.style.borderColor='#b0b0b0'">
                     <option value="recent" {% if sort_mode != 'relevance' %}selected{% endif %}>新着順</option>
                     <option value="relevance" {% if sort_mode == 'relevance' %}selected{% endif %}>おすすめ順(β)</option>
                 </select>

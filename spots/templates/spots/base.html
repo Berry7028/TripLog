@@ -46,8 +46,7 @@
                 <!-- 検索フォーム -->
                 <form class="d-flex me-3" method="GET" action="{% url 'home' %}">
                     <div class="input-group search-group">
-                        <input class="form-control search-input" type="search" name="search"
-                               placeholder="検索" value="{{ search_query|default_if_none:'' }}">
+                        <input class="form-control search-input" type="search" name="search" placeholder="検索" value="{{ search_query|default_if_none:'' }}">
                         <input type="hidden" name="sort" value="{{ sort_mode|default_if_none:'' }}">
                         {% if search_query %}
                         <a class="btn btn-clear" href="{% url 'home' %}">×</a>
@@ -65,7 +64,7 @@
                         {% if user.is_staff %}
                         <a class="nav-link" href="{% url 'admin_dashboard' %}"><i class="fas fa-cog me-1"></i>管理</a>
                         {% endif %}
-                        <a class="nav-link" href="{% url 'logout' %}">ログアウト</a>
+                        <a class="nav-link" href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket" style="color: #F5BABB;"></i></a>
                     </li>
                     {% else %}
                     <li class="nav-item">
