@@ -1,100 +1,47 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib import messages
-from django.db.models import Q, Avg, Count, F
-from django.utils import timezone
 from datetime import timedelta
-from django.http import JsonResponse
+
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
+from django.db.models import Avg, Count, F, Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
-from .models import Spot, Review, UserProfile, Tag, SpotView, UserSpotInteraction, UserRecommendationScore
-from .forms import SpotForm, ReviewForm, UserProfileForm
+
+from .forms import ReviewForm, SpotForm, UserProfileForm
+from .models import (
+    Review,
+    Spot,
+    SpotView,
+    UserProfile,
+    UserSpotInteraction,
+)
+from .services.homepage import fetch_homepage_spots
+from .services.serializers import serialize_spot_brief, serialize_spot_summary
 
 
 def home(request):
     """ホームページ - スポット一覧"""
-    spots_qs = (
-        Spot.objects.all()
-        .select_related('created_by')
-        .prefetch_related('reviews', 'tags')
+    result = fetch_homepage_spots(
+        user=request.user,
+        search_query=request.GET.get('search', ''),
+        sort_mode=request.GET.get('sort', 'recent'),
     )
 
-    # 検索機能
-    # 空や未指定でもフォームに"None"が入らないよう空文字に正規化
-    search_query = request.GET.get('search', '') or ''
-    if search_query:
-        spots_qs = spots_qs.filter(
-            Q(title__icontains=search_query) |
-            Q(description__icontains=search_query) |
-            Q(address__icontains=search_query) |
-            Q(tags__name__icontains=search_query)
-        ).distinct()
-
-    sort_mode = request.GET.get('sort', 'recent')
-    if sort_mode not in ('recent', 'relevance'):
-        sort_mode = 'recent'
-
-    spots_list = list(spots_qs)
-    recommendation_source = None
-    recommendation_notice = None
-    recommendation_scored_ids = []
-
-    if sort_mode == 'relevance':
-        if request.user.is_authenticated:
-            # DBから保存済みスコアを取得して並び替え
-            user_scores = UserRecommendationScore.objects.filter(
-                user=request.user,
-                spot__in=spots_list
-            ).select_related('spot')
-            
-            if user_scores.exists():
-                # スコアマップを作成
-                score_map = {score.spot_id: score.score for score in user_scores}
-                source_info = user_scores.first().source if user_scores.first() else 'none'
-                
-                # スコアがあるスポットとないスポットを分ける
-                scored_spots = []
-                unscored_spots = []
-                
-                for spot in spots_list:
-                    if spot.id in score_map:
-                        scored_spots.append(spot)
-                        recommendation_scored_ids.append(spot.id)
-                    else:
-                        unscored_spots.append(spot)
-                
-                # スコアでソート
-                scored_spots.sort(key=lambda s: score_map.get(s.id, 0), reverse=True)
-                
-                # スコアがあるスポットを先に、その後未スコアのスポットを追加
-                spots_list = scored_spots + unscored_spots
-                
-                recommendation_source = source_info
-                if source_info == 'api':
-                    recommendation_notice = 'AIが分析したおすすめ順で表示しています。(beta)'
-                elif source_info == 'fallback':
-                    recommendation_notice = '閲覧履歴をもとに推定したおすすめ順です。'
-                else:
-                    recommendation_notice = 'おすすめ順で表示しています。'
-            else:
-                recommendation_notice = 'おすすめスコアがまだ計算されていません。しばらくお待ちください。'
-        else:
-            recommendation_notice = 'おすすめ順を利用するにはログインしてください。'
-
-    # ページネーション
-    paginator = Paginator(spots_list, 12)  # 1ページに12件表示
+    paginator = Paginator(result.spots, 12)  # 1ページに12件表示
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
         'page_obj': page_obj,
-        'search_query': search_query,
-        'sort_mode': sort_mode,
-        'recommendation_source': recommendation_source,
-        'recommendation_notice': recommendation_notice,
-        'recommendation_scored_ids': recommendation_scored_ids,
+        'search_query': result.search_query,
+        'sort_mode': result.sort_mode,
+        'recommendation_source': result.recommendation_source,
+        'recommendation_notice': result.recommendation_notice,
+        'recommendation_scored_ids': result.recommendation_scored_ids,
     }
     return render(request, 'spots/home.html', context)
 
@@ -308,19 +255,11 @@ def search_spots_api(request):
             Q(address__icontains=query) |
             Q(tags__name__icontains=query)
         ).distinct()[:10]  # 最大10件
-        
-        results = []
-        for spot in spots:
-            results.append({
-                'id': spot.id,
-                'title': spot.title,
-                'address': spot.address,
-                'latitude': spot.latitude,
-                'longitude': spot.longitude,
-            })
-        
+
+        results = [serialize_spot_brief(spot) for spot in spots]
+
         return JsonResponse({'results': results})
-    
+
     return JsonResponse({'results': []})
 
 
@@ -336,29 +275,21 @@ def map_view(request):
 
 def spots_api(request):
     """スポット一覧API"""
-    spots = Spot.objects.all().select_related('created_by')
+    spots = (
+        Spot.objects.all()
+        .select_related('created_by')
+        .prefetch_related('tags')
+    )
     filter_mode = (request.GET.get('filter') or '').lower()
     if request.user.is_authenticated and filter_mode in ('mine', 'others'):
         if filter_mode == 'mine':
             spots = spots.filter(created_by=request.user)
         elif filter_mode == 'others':
             spots = spots.exclude(created_by=request.user)
-    
-    spots_data = []
-    for spot in spots:
-        spots_data.append({
-            'id': spot.id,
-            'title': spot.title,
-            'description': spot.description,
-            'latitude': spot.latitude,
-            'longitude': spot.longitude,
-            'address': spot.address,
-            'image': (spot.image.url if spot.image else (spot.image_url or None)),
-            'created_by': spot.created_by.username,
-            'created_at': spot.created_at.isoformat(),
-            'tags': [t.name for t in spot.tags.all()],
-        })
-    
+
+    spots_list = list(spots)
+    spots_data = [serialize_spot_summary(spot) for spot in spots_list]
+
     return JsonResponse({'spots': spots_data})
 
 
@@ -402,21 +333,8 @@ def add_spot_api(request):
                 image_url=image_url or None,
                 created_by=request.user
             )
-            
-            # レスポンスデータ
-            spot_data = {
-                'id': spot.id,
-                'title': spot.title,
-                'description': spot.description,
-                'latitude': spot.latitude,
-                'longitude': spot.longitude,
-                'address': spot.address,
-                'image': (spot.image.url if spot.image else (spot.image_url or None)),
-                'created_by': spot.created_by.username,
-                'created_at': spot.created_at.isoformat(),
-            }
-            
-            return JsonResponse({'success': True, 'spot': spot_data})
+
+            return JsonResponse({'success': True, 'spot': serialize_spot_summary(spot)})
             
         except ValueError as e:
             return JsonResponse({'success': False, 'error': '座標の形式が正しくありません。'})
