@@ -518,7 +518,11 @@ class RecommendationServiceTests(TestCase):
         self.assertEqual([spot.id for spot in result.spots], [self.spot1.id, self.spot2.id])
 
     def test_order_spots_by_relevance_fallback(self):
-        result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
+        with patch('spots.services.analytics._request_scores_from_openrouter') as mock_request:
+            mock_request.return_value = {}
+            result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
+            mock_request.assert_called_once()
+
         self.assertEqual(result.source, 'fallback')
         ordered_ids = [spot.id for spot in result.spots]
         self.assertEqual(ordered_ids[0], self.spot1.id)
