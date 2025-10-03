@@ -79,55 +79,55 @@
             window.open('https://maps-planner.vercel.app/', '_blank', 'noopener,noreferrer');
         }
 
-        // iframe読み込み速度デバッグ機能
-        document.addEventListener('DOMContentLoaded', function() {
-            const iframe = document.getElementById('planIframe');
-            let startTime;
+        // // iframe読み込み速度デバッグ機能
+        // document.addEventListener('DOMContentLoaded', function() {
+        //     const iframe = document.getElementById('planIframe');
+        //     let startTime;
 
-            // iframeのsrcが設定された時点で開始時間を記録
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
-                        startTime = performance.now();
-                        console.log('Iframe load started at:', new Date().toISOString());
-                    }
-                });
-            });
+        //     // iframeのsrcが設定された時点で開始時間を記録
+        //     const observer = new MutationObserver(function(mutations) {
+        //         mutations.forEach(function(mutation) {
+        //             if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+        //                 startTime = performance.now();
+        //                 console.log('Iframe load started at:', new Date().toISOString());
+        //             }
+        //         });
+        //     });
 
-            observer.observe(iframe, {
-                attributes: true,
-                attributeFilter: ['src']
-            });
+        //     observer.observe(iframe, {
+        //         attributes: true,
+        //         attributeFilter: ['src']
+        //     });
 
-            // 初期読み込みの開始時間を記録
-            startTime = performance.now();
-            console.log('Iframe load started at:', new Date().toISOString());
+        //     // 初期読み込みの開始時間を記録
+        //     startTime = performance.now();
+        //     console.log('Iframe load started at:', new Date().toISOString());
 
-            // iframeの読み込み完了を検知
-            iframe.addEventListener('load', function() {
-                const endTime = performance.now();
-                const loadTime = endTime - startTime;
-                console.log('Iframe load completed at:', new Date().toISOString());
-                console.log('Total load time:', loadTime.toFixed(2), 'milliseconds');
+        //     // iframeの読み込み完了を検知
+        //     iframe.addEventListener('load', function() {
+        //         const endTime = performance.now();
+        //         const loadTime = endTime - startTime;
+        //         console.log('Iframe load completed at:', new Date().toISOString());
+        //         console.log('Total load time:', loadTime.toFixed(2), 'milliseconds');
 
-                // ページに読み込み時間を表示（デバッグ用）
-                const debugInfo = document.createElement('div');
-                debugInfo.id = 'debug-info';
-                debugInfo.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:white;padding:10px;border-radius:5px;font-size:12px;z-index:1000;';
-                debugInfo.textContent = `読み込み時間: ${loadTime.toFixed(2)}ms`;
-                document.body.appendChild(debugInfo);
+        //         // ページに読み込み時間を表示（デバッグ用）
+        //         const debugInfo = document.createElement('div');
+        //         debugInfo.id = 'debug-info';
+        //         debugInfo.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:white;padding:10px;border-radius:5px;font-size:12px;z-index:1000;';
+        //         debugInfo.textContent = `読み込み時間: ${loadTime.toFixed(2)}ms`;
+        //         document.body.appendChild(debugInfo);
 
-                // 5秒後にデバッグ情報を非表示
-                setTimeout(() => {
-                    const debugEl = document.getElementById('debug-info');
-                    if (debugEl) debugEl.remove();
-                }, 5000);
-            });
+        //         // 5秒後にデバッグ情報を非表示
+        //         setTimeout(() => {
+        //             const debugEl = document.getElementById('debug-info');
+        //             if (debugEl) debugEl.remove();
+        //         }, 5000);
+        //     });
 
-            // エラーハンドリング
-            iframe.addEventListener('error', function() {
-                console.error('Iframe failed to load');
-            });
-        });
+        //     // エラーハンドリング
+        //     iframe.addEventListener('error', function() {
+        //         console.error('Iframe failed to load');
+        //     });
+        // });
     </script>
 {% endblock %}
