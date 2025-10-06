@@ -191,3 +191,6 @@ OPENROUTER_RECOMMENDATION_URL = os.environ.get(
 OPENROUTER_TIMEOUT = _env_int('OPENROUTER_TIMEOUT', 15)
 OPENROUTER_SITE_URL = os.environ.get('OPENROUTER_SITE_URL', 'https://triplog.example.com')
 OPENROUTER_APP_NAME = os.environ.get('OPENROUTER_APP_NAME', 'TripLog Recommendations')
+
+# Allow embedding in iframes (for VS Code Simple Browser)
+X_FRAME_OPTIONS = 'ALLOWALL'
