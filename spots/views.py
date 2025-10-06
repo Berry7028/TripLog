@@ -94,6 +94,17 @@ def spot_detail(request, spot_id):
             is_favorite = profile.favorite_spots.filter(id=spot.id).exists()
         except UserProfile.DoesNotExist:
             is_favorite = False
+    else:
+        # user が未認証の場合は is_favorite は False のまま進む
+        pass
+
+    # 関連スポット（同じユーザーの投稿） - 現在のスポットを除いた最新5件のみ渡す
+    related_spots = (
+        spot.created_by.spot_set.exclude(id=spot.id)
+        .select_related('created_by')
+        .prefetch_related('tags')
+        .order_by('-created_at')[:5]
+    )
 
     context = {
         'spot': spot,
@@ -102,7 +113,9 @@ def spot_detail(request, spot_id):
         'review_form': review_form,
         'is_favorite': is_favorite,
         'share_url': share_url,
+        'related_spots': related_spots,
     }
+
     return render(request, 'spots/spot_detail.html', context)
 
 
