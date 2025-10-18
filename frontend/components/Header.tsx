@@ -1,9 +1,13 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import LogoutButton from './LogoutButton';
+import { fetchAuthStatus } from '@/lib/server-api';
 
 interface HeaderProps {
-  currentUser: {
+  currentUser?: {
     id: number;
     username: string;
   } | null;
@@ -16,7 +20,25 @@ const navItems = [
   { href: '/plan', label: 'プラン' },
 ];
 
-export default function Header({ currentUser }: HeaderProps) {
+export default function Header({ currentUser: initialUser }: HeaderProps) {
+  const [currentUser, setCurrentUser] = useState(initialUser);
+
+  useEffect(() => {
+    if (initialUser === undefined) {
+      fetchAuthStatus()
+        .then((auth) => {
+          if (auth.is_authenticated && auth.user) {
+            setCurrentUser({ id: auth.user.id, username: auth.user.username });
+          } else {
+            setCurrentUser(null);
+          }
+        })
+        .catch(() => {
+          setCurrentUser(null);
+        });
+    }
+  }, [initialUser]);
+
   return (
     <header className="border-b border-slate-200 bg-white shadow-sm">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'spots',
 ]
 
@@ -63,6 +64,7 @@ if not DEBUG:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -178,6 +180,15 @@ CSRF_TRUSTED_ORIGINS = [
     'https://8001-ij3w7fliisck5f9nvstl9-41315974.manusvm.computer',
     'https://*.manusvm.computer',
 ]
+
+# CORS 設定
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # OpenAI (AI レコメンド) 設定
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
