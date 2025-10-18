@@ -2,21 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """
-Flow chart generator for TripLog (crawler version)
+TripLog 用フローチャート生成スクリプト（クローラー版）
 
-This script crawls a running UI starting from a base URL, discovers links
-within the same origin, and emits a Mermaid (.mmd) flowchart by default.
-Optionally, it can output Graphviz DOT and render SVG/PNG if the corresponding
-CLI tools are available (`mmdc` for Mermaid or `dot` for Graphviz).
+指定した基点URLから稼働中のUIをクロールし、同一オリジン内のリンクをたどって、
+Mermaid (.mmd) 形式のフローチャートをデフォルトで出力します。
+必要なCLIツールが存在する場合は Graphviz DOT や SVG/PNG も生成可能です
+（Mermaid は `mmdc`、Graphviz は `dot` を使用）。
 
-Usage examples:
+使用例:
   python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/
   python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/ --format svg
   python scripts/flow/generate_flow.py --base-url http://127.0.0.1:8000/ --max-pages 100 \
       --exclude "^/admin|^/static|^/media"
 
-No Python package dependency on graphviz/bs4 is required; we use stdlib
-HTMLParser and shell out to `mmdc`/`dot` when available.
+graphviz や bs4 の Python パッケージ依存は不要で、標準ライブラリの HTMLParser を用い、
+必要に応じて `mmdc` / `dot` をサブプロセスで呼び出して描画します。
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ import requests
 
 
 class _LinkParser(HTMLParser):
-    """Minimal HTML parser to extract <title>, <a href>, and anchor text."""
+    """<title>・リンクURL・アンカーテキストを抽出する最小限のHTMLパーサー。"""
 
     def __init__(self) -> None:
         super().__init__()
@@ -42,7 +42,7 @@ class _LinkParser(HTMLParser):
         self.in_title: bool = False
         self.current_anchor_href: Optional[str] = None
         self.current_anchor_text_parts: List[str] = []
-        self.links: List[Tuple[str, str]] = []  # (href, text)
+        self.links: List[Tuple[str, str]] = []  # (href, テキスト)
 
     def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
         if tag.lower() == "title":
@@ -82,20 +82,20 @@ def _normalize_url(base: str, href: str) -> Optional[str]:
     if not href:
         return None
     href = href.strip()
-    # Ignore anchors, mailto, tel, javascript
+    # アンカーや mailto / tel / javascript のリンクは除外
     if href.startswith("#") or href.startswith("mailto:") or href.startswith("tel:") or href.lower().startswith("javascript:"):
         return None
     abs_url = urljoin(base, href)
-    # Remove fragments
+    # フラグメントを除去
     parts = urlparse(abs_url)
     parts = parts._replace(fragment="")
     return urlunparse(parts)
 
 
 def crawl(base_url: str, max_pages: int, include_pattern: Optional[str], exclude_pattern: Optional[str]) -> Tuple[Dict[str, str], List[Tuple[str, str, str]]]:
-    """BFS crawl within same origin and return (url->title, edges).
+    """同一オリジン内を幅優先でクロールし、(URL→タイトル, エッジ一覧) を返す。
 
-    edges are tuples of (src_url, dst_url, anchor_text)
+    エッジは (src_url, dst_url, anchor_text) 形式のタプル。
     """
     base = urlparse(base_url)
     origin = (base.scheme, base.netloc)
@@ -133,7 +133,7 @@ def crawl(base_url: str, max_pages: int, include_pattern: Optional[str], exclude
         try:
             parser.feed(resp.text)
         except Exception:
-            # Best-effort parsing; skip on fatal HTML errors
+            # できる限りの解析を行い、致命的なHTMLエラーはスキップ
             continue
 
         title = parser.title or urlparse(url).path or url
@@ -150,7 +150,7 @@ def crawl(base_url: str, max_pages: int, include_pattern: Optional[str], exclude
             if exclude_re and exclude_re.search(path):
                 continue
             if include_re and not include_re.search(path):
-                # If include is specified, only include matching paths
+                # include が指定されている場合は、条件に一致するパスのみ許可
                 continue
 
             edges.append((url, nurl, text))
@@ -164,10 +164,10 @@ _UUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]
 
 
 def canonical_path(path: str) -> str:
-    """Normalize dynamic path segments to improve node aggregation.
+    """動的なパス要素を正規化してノードの集約をしやすくする。
 
-    - Remove trailing slash (except root)
-    - Replace UUID-like and purely numeric segments with :id
+    - 末尾のスラッシュを削除（ルートを除く）
+    - UUID 風または数字のみのセグメントを :id に置き換える
     """
     if not path:
         return "/"
@@ -205,19 +205,19 @@ def word_wrap(text: str, width: int) -> str:
 
 
 def dot_id(label: str) -> str:
-    """Create a stable DOT node identifier from a label/url."""
+    """ラベルやURLから安定したDOTノード識別子を生成する。"""
     return "n_" + str(abs(hash(label)))
 
 
 def render_mermaid(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) -> str:
-    """Emit Mermaid flowchart with grouping and de-duplicated edges.
+    """グループ化と重複排除を行ったMermaidフローチャートを生成する。
 
-    - Left-to-right layout
-    - Group by first path segment using subgraph-like sections (Mermaid: subgraph)
-    - Merge parallel edges; show up to 3 labels, rest as (+N)
-    - Suppress self-loops
+    - 左から右へのレイアウト
+    - パスの先頭セグメント単位でサブグラフ的にグルーピング
+    - 平行エッジをまとめ、ラベルは最大3件まで表示し残りは (+N) とする
+    - 自己ループは表示しない
     """
-    # Build groups and ids
+    # グループとIDを組み立てる
     id_map: Dict[str, str] = {}
     groups: Dict[str, List[str]] = {}
     for label in nodes:
@@ -230,7 +230,7 @@ def render_mermaid(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) 
     lines: List[str] = []
     lines.append("flowchart LR")
 
-    # Nodes inside subgraphs
+    # サブグラフ内のノードを出力
     for seg, labels in sorted(groups.items()):
         lines.append(f"  subgraph {seg}")
         for label in labels:
@@ -243,7 +243,7 @@ def render_mermaid(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) 
             lines.append(f"    {nid}[\"{disp}\"]")
         lines.append("  end")
 
-    # Merge edges
+    # エッジを集約
     grouped: Dict[Tuple[str, str], Set[str]] = {}
     for src, dst, label in edges:
         s = id_map[src]
@@ -269,13 +269,13 @@ def render_mermaid(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) 
 
 
 def render_dot(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) -> str:
-    """Build a DOT string with better readability.
+    """可読性を高めた DOT 形式の文字列を生成する。
 
-    Improvements:
-    - rankdir=LR, increased node separation
-    - rounded boxes, subtle colors
-    - cluster subgraphs by first path segment
-    - deduplicate edges and wrap labels
+    改善点:
+    - rankdir=LR としてノード間隔を広げる
+    - 角丸ボックスと控えめな配色
+    - パスの先頭セグメントごとにクラスタを形成
+    - エッジを重複排除し、ラベルは折り返す
     """
     lines: List[str] = []
     lines.append("digraph AppFlow {")
@@ -290,12 +290,12 @@ def render_dot(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) -> s
     for label in nodes:
         nid = dot_id(label)
         id_map[label] = nid
-        # derive group from first path segment
+        # パスの先頭セグメントからグループ名を導出
         path = label.split("\n", 1)[0]
         seg = path.strip("/").split("/", 1)[0] or "root"
         clusters.setdefault(seg, []).append(label)
 
-    # Emit clusters
+    # クラスタを出力
     cluster_index = 0
     for seg, labels in sorted(clusters.items()):
         lines.append(f"  subgraph cluster_{cluster_index} {{")
@@ -303,7 +303,7 @@ def render_dot(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) -> s
         lines.append("    color=\"#E6DFAE\"; fontsize=12; fontname=\"Helvetica\";")
         for label in labels:
             nid = id_map[label]
-            # compact label: wrap at 26 chars per line for title part
+            # ラベルを簡潔にするため、タイトル部は26文字で折り返す
             if "\n" in label:
                 path_part, title_part = label.split("\n", 1)
                 disp = path_part + "\\n" + word_wrap(title_part, 26)
@@ -314,7 +314,7 @@ def render_dot(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) -> s
         lines.append("  }")
         cluster_index += 1
 
-    # Deduplicate edges (src,dst,label)
+    # エッジ（src, dst, label）の重複を排除
     seen_edges: Set[Tuple[str, str, str]] = set()
     for src, dst, elabel in edges:
         s = id_map[src]
@@ -334,12 +334,12 @@ def render_dot(nodes: Iterable[str], edges: Iterable[Tuple[str, str, str]]) -> s
 
 
 def write_outputs_mermaid(mmd_text: str, outdir: Path, filename: str, fmt: str) -> Path:
-    """Write .mmd, and if `mmdc` exists, render to image (svg/png)."""
+    """.mmd を出力し、`mmdc` が利用可能なら画像（SVG/PNG）に変換する。"""
     outdir.mkdir(parents=True, exist_ok=True)
     mmd_path = outdir / f"{filename}.mmd"
     mmd_path.write_text(mmd_text, encoding="utf-8")
 
-    mmdc_bin = shutil.which("mmdc")  # Mermaid CLI (node @mermaid-js/mermaid-cli)
+    mmdc_bin = shutil.which("mmdc")  # Mermaid CLI（Node製 @mermaid-js/mermaid-cli）
     if not mmdc_bin:
         return mmd_path
 
@@ -380,8 +380,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     titles, edges = crawl(args.base_url, args.max_pages, args.include, args.exclude)
-    # Build nodes list using page titles for labels, but use URLs as identities
-    # For readability, show path + title when available
+    # ページタイトルをラベルとして使い、URLを識別子にしたノード一覧を作成
+    # 可読性向上のため、可能であればパスとタイトルを併記
     labeled_nodes: List[str] = []
     url_to_label: Dict[str, str] = {}
     for url, title in titles.items():
@@ -391,7 +391,7 @@ def main() -> None:
         url_to_label[url] = label
         labeled_nodes.append(label)
 
-    # Remap edges to use node labels
+    # ノードラベルを用いるようにエッジを再マッピング
     remapped_edges: List[Tuple[str, str, str]] = []
     for src, dst, text in edges:
         if src in url_to_label and dst in url_to_label:

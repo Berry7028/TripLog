@@ -1,2 +1,2 @@
-"""Django management package for custom commands in spots app."""
+"""spots アプリ向けカスタムコマンドをまとめる Django management パッケージ。"""
 

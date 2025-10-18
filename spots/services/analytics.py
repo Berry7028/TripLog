@@ -21,7 +21,7 @@ class RecommendationResult:
     """並び替え結果とメタ情報を保持するデータクラス。"""
 
     spots: List
-    source: str = 'none'  # 'api' | 'fallback' | 'none'
+    source: str = 'none'  # 'api' | 'fallback' | 'none' のいずれかを示す
     scored_spot_ids: Set[int] = field(default_factory=set)
     scores: Dict[int, float] = field(default_factory=dict)
 
