@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, admin_views
+from . import views, admin_views, api_views
 
 urlpatterns = [
     # ホーム・ランキング・ユーザー関連
@@ -19,9 +19,23 @@ urlpatterns = [
     path('add/', views.add_spot, name='add_spot'),
 
     # APIエンドポイント
-    path('api/search/', views.search_spots_api, name='search_spots_api'),
+    path('api/search/', api_views.search_suggestions, name='search_spots_api'),
     path('api/spots/', views.spots_api, name='spots_api'),
     path('api/spots/add/', views.add_spot_api, name='add_spot_api'),
+    path('api/home/', api_views.home_data, name='home_data_api'),
+    path('api/spots/<int:spot_id>/detail/', api_views.spot_detail_data, name='spot_detail_data'),
+    path('api/spots/<int:spot_id>/favorite-toggle/', api_views.toggle_favorite_api, name='toggle_favorite_api'),
+    path('api/spots/<int:spot_id>/review/', api_views.add_review_api, name='add_review_api'),
+    path('api/spots/<int:spot_id>/record-view/', api_views.record_view_api, name='record_view_api'),
+    path('api/spots/add/form/', api_views.add_spot_via_api, name='add_spot_via_api'),
+    path('api/recent-spots/', api_views.recent_spots, name='recent_spots_api'),
+    path('api/ranking/', api_views.ranking_data, name='ranking_api'),
+    path('api/my-spots/', api_views.my_spots_data, name='my_spots_api'),
+    path('api/profile/', api_views.profile_api, name='profile_api'),
+    path('api/auth/me/', api_views.auth_status, name='auth_status_api'),
+    path('api/auth/login/', api_views.login_api, name='login_api'),
+    path('api/auth/logout/', api_views.logout_api, name='logout_api'),
+    path('api/auth/register/', api_views.register_api, name='register_api'),
 
     # 地図・プラン
     path('map/', views.map_view, name='map'),
