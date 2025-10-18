@@ -218,7 +218,7 @@ def store_recommendation_scores(
             score = float(item['score'])
         except (KeyError, TypeError, ValueError):
             continue
-        cleaned = {'spot_id': spot_id, 'score': score}
+        cleaned = {'spot_id': spot_id, 'score': round(score, 4)}
         if 'reason' in item and isinstance(item['reason'], str):
             cleaned['reason'] = item['reason']
         cleaned_scores.append(cleaned)
@@ -278,6 +278,7 @@ def store_recommendation_scores(
         {
             'scores_saved': saved_count,
             'missing_spot_ids': missing_spot_ids,
+            'decimal_precision': 4,
         }
     )
 
@@ -450,7 +451,7 @@ def _compute_and_store_user_scores(
                     UserRecommendationScore(
                         user=user,
                         spot=spot,
-                        score=score_value,
+                        score=round(float(score_value), 4),
                         source=result.source,
                     )
                 )
@@ -474,4 +475,5 @@ def _compute_and_store_user_scores(
     return {
         'scores_saved': len(scores_to_create),
         'source': result.source,
+        'decimal_precision': 4,
     }
