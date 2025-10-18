@@ -5,21 +5,22 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import ReviewForm, SpotForm, UserProfileForm
-from .models import (
-    Review,
-    Spot,
-    SpotView,
-    UserProfile,
-    UserSpotInteraction,
-)
+from .models import Review, Spot, UserProfile
 from .services.homepage import fetch_homepage_spots
+from .services.interactions import (
+    fetch_related_spots,
+    is_favorite_spot,
+    log_spot_view,
+    toggle_favorite_spot,
+    update_view_duration,
+)
 from .services.serializers import serialize_spot_brief, serialize_spot_summary
 
 
@@ -49,27 +50,8 @@ def home(request):
 def spot_detail(request, spot_id):
     """スポット詳細ページ"""
     spot = get_object_or_404(Spot, id=spot_id)
-    # 閲覧ログを記録（GETアクセス時）
     if request.method == 'GET':
-        try:
-            SpotView.objects.create(spot=spot)
-        except Exception:
-            # ログ記録は失敗しても画面表示を継続
-            pass
-        if request.user.is_authenticated:
-            try:
-                interaction, created = UserSpotInteraction.objects.get_or_create(
-                    user=request.user,
-                    spot=spot,
-                    defaults={'view_count': 1},
-                )
-                if not created:
-                    interaction.view_count = F('view_count') + 1
-                    interaction.save(update_fields=['view_count'])
-                    interaction.refresh_from_db(fields=['view_count'])
-            except Exception:
-                # 記録に失敗しても画面表示を優先
-                pass
+        log_spot_view(spot, request.user)
     reviews = spot.reviews.all().select_related('user')
 
     # 平均評価を計算
@@ -78,33 +60,13 @@ def spot_detail(request, spot_id):
     # シェアURL（絶対URL）
     share_url = request.build_absolute_uri(spot.get_absolute_url())
 
-    # レビューフォーム
-    review_form = None
-    if request.user.is_authenticated:
-        # 既にレビューしているかチェック
-        existing_review = reviews.filter(user=request.user).first()
-        if not existing_review:
-            review_form = ReviewForm()
-    
+    review_form = _build_review_form(request.user, reviews)
+
     # お気に入り状態を判定
-    is_favorite = False
-    if request.user.is_authenticated:
-        try:
-            profile = UserProfile.objects.get(user=request.user)
-            is_favorite = profile.favorite_spots.filter(id=spot.id).exists()
-        except UserProfile.DoesNotExist:
-            is_favorite = False
-    else:
-        # user が未認証の場合は is_favorite は False のまま進む
-        pass
+    is_favorite = is_favorite_spot(spot, request.user)
 
     # 関連スポット（同じユーザーの投稿） - 現在のスポットを除いた最新5件のみ渡す
-    related_spots = (
-        spot.created_by.spot_set.exclude(id=spot.id)
-        .select_related('created_by')
-        .prefetch_related('tags')
-        .order_by('-created_at')[:5]
-    )
+    related_spots = fetch_related_spots(spot)
 
     context = {
         'spot': spot,
@@ -125,26 +87,8 @@ def record_spot_view(request, spot_id):
     """スポット閲覧の滞在時間を記録"""
 
     spot = get_object_or_404(Spot, id=spot_id)
-
-    try:
-        duration_ms = float(request.POST.get('duration_ms', 0))
-    except (TypeError, ValueError):
-        duration_ms = 0.0
-
-    duration_ms = max(duration_ms, 0.0)
-    duration = timedelta(milliseconds=duration_ms)
-
-    interaction, _ = UserSpotInteraction.objects.get_or_create(
-        user=request.user,
-        spot=spot,
-        defaults={'view_count': 1},
-    )
-
-    if duration > timedelta(0):
-        interaction.total_view_duration += duration
-
-    # auto_now=True のため last_viewed_at は save 時に更新される
-    interaction.save(update_fields=['total_view_duration', 'last_viewed_at'])
+    duration_ms = _safe_float(request.POST.get('duration_ms', 0))
+    update_view_duration(spot, request.user, timedelta(milliseconds=duration_ms))
 
     return JsonResponse({'success': True})
 
@@ -320,58 +264,60 @@ def logout_view(request):
 @login_required
 def add_spot_api(request):
     """スポット追加API"""
-    if request.method == 'POST':
-        try:
-            # フォームデータを取得
-            title = request.POST.get('title')
-            description = request.POST.get('description')
-            latitude = float(request.POST.get('latitude'))
-            longitude = float(request.POST.get('longitude'))
-            address = request.POST.get('address', '')
-            image = request.FILES.get('image')
-            image_url = (request.POST.get('image_url') or '').strip()
-            
-            # バリデーション
-            if not title or not description:
-                return JsonResponse({'success': False, 'error': 'タイトルと説明は必須です。'})
-            
-            # スポットを作成
-            spot = Spot.objects.create(
-                title=title,
-                description=description,
-                latitude=latitude,
-                longitude=longitude,
-                address=address,
-                image=image,
-                image_url=image_url or None,
-                created_by=request.user
-            )
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です。'}, status=405)
 
-            return JsonResponse({'success': True, 'spot': serialize_spot_summary(spot)})
-            
-        except ValueError as e:
-            return JsonResponse({'success': False, 'error': '座標の形式が正しくありません。'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です。'})
+    form = SpotForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return JsonResponse(
+            {'success': False, 'error': _extract_first_error_message(form)},
+            status=400,
+        )
+
+    spot = form.save(user=request.user)
+    return JsonResponse({'success': True, 'spot': serialize_spot_summary(spot)})
 
 
 @login_required
 def toggle_favorite(request, spot_id):
     """スポットのお気に入りをトグル"""
     spot = get_object_or_404(Spot, id=spot_id)
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == 'POST':
-        if profile.favorite_spots.filter(id=spot.id).exists():
-            profile.favorite_spots.remove(spot)
-            messages.info(request, 'お気に入りを解除しました。')
-        else:
-            profile.favorite_spots.add(spot)
+        is_now_favorite = toggle_favorite_spot(spot, request.user)
+        if is_now_favorite:
             messages.success(request, 'お気に入りに追加しました！')
+        else:
+            messages.info(request, 'お気に入りを解除しました。')
     return redirect('spot_detail', spot_id=spot.id)
 
 
 def plan_view(request):
     """プランページ - iframeで外部サイトを表示"""
     return render(request, 'spots/plan.html')
+
+
+def _build_review_form(user, reviews):
+    if not getattr(user, 'is_authenticated', False):
+        return None
+    if reviews.filter(user=user).exists():
+        return None
+    return ReviewForm()
+
+
+def _safe_float(raw_value) -> float:
+    try:
+        return float(raw_value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _extract_first_error_message(form: SpotForm) -> str:
+    errors = form.errors
+    if hasattr(errors, 'items'):
+        for _field, messages in errors.items():
+            if messages:
+                return messages[0]
+    non_field_errors = form.non_field_errors()
+    if non_field_errors:
+        return non_field_errors[0]
+    return '入力内容を確認してください。'
