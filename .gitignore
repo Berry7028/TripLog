@@ -50,6 +50,10 @@ ENV/
 node_modules/
 npm-debug.log*
 
+# Allow frontend shared libraries
+!frontend/lib/
+!frontend/lib/**
+
 # Environment variables
 .env
 .env.local

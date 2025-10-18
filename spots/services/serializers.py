@@ -65,6 +65,21 @@ def serialize_review(review: Review) -> Dict[str, object]:
     }
 
 
+def serialize_review_activity(review: Review) -> Dict[str, object]:
+    """ユーザープロフィール向けのレビュー情報。"""
+
+    return {
+        "id": review.id,
+        "rating": review.rating,
+        "comment": review.comment,
+        "created_at": review.created_at.isoformat() if review.created_at else None,
+        "spot": {
+            "id": review.spot.id,
+            "title": review.spot.title,
+        },
+    }
+
+
 def serialize_user_profile(profile: UserProfile) -> Dict[str, object]:
     """ユーザープロフィールをJSON化。"""
 
