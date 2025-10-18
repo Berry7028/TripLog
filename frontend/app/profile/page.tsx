@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import ProfileForm from '@/components/ProfileForm';
+import SpotGrid from '@/components/SpotGrid';
 import { fetchAuthStatus, fetchProfile } from '@/lib/server-api';
 
 function formatMembershipDuration(dateJoined?: string | null): string {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Fragment } from 'react';
 
 import type { PaginationMeta } from '@/types/api';
 
@@ -23,23 +24,36 @@ export default function Pagination({ pagination, basePath = '/', searchParams }:
   const items: Array<{ label: string; page: number; disabled?: boolean; active?: boolean }> = [
     { label: '最初', page: 1, disabled: !pagination.has_previous },
     { label: '前へ', page: Math.max(1, pagination.page - 1), disabled: !pagination.has_previous },
-    { label: `${pagination.page} / ${pagination.pages}`, page: pagination.page, active: true, disabled: true },
+    { label: `${pagination.page} / ${pagination.pages}`, page: pagination.page, disabled: true, active: true },
     { label: '次へ', page: Math.min(pagination.pages, pagination.page + 1), disabled: !pagination.has_next },
     { label: '最後', page: pagination.pages, disabled: !pagination.has_next },
   ];
 
   return (
-    <nav aria-label="ページネーション" className="mt-4">
-      <ul className="pagination justify-content-center">
+    <nav className="mt-8 flex justify-center" aria-label="ページネーション">
+      <ul className="flex flex-wrap items-center gap-2">
         {items.map((item) => (
-          <li
-            key={item.label}
-            className={`page-item${item.disabled ? ' disabled' : ''}${item.active ? ' active' : ''}`}
-          >
+          <li key={item.label}>
             {item.disabled ? (
-              <span className="page-link">{item.label}</span>
+              <span 
+                className={`inline-block px-3 py-2 rounded-pill text-sm ${
+                  item.active 
+                    ? 'text-white' 
+                    : 'text-gray-400 border border-gray-300'
+                }`}
+                style={item.active ? { 
+                  backgroundColor: 'var(--brand-teal)', 
+                  borderColor: 'var(--brand-teal)' 
+                } : {}}
+              >
+                {item.label}
+              </span>
             ) : (
-              <Link className="page-link" href={createHref(item.page)}>
+              <Link
+                href={createHref(item.page)}
+                className="inline-block px-3 py-2 rounded-pill text-sm border border-gray-300 transition hover:bg-gray-100"
+                style={{ color: 'var(--brand-teal-dark)' }}
+              >
                 {item.label}
               </Link>
             )}

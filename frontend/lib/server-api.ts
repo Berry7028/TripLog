@@ -1,15 +1,5 @@
 import { buildApiUrl } from './config';
 
-import type {
-  AuthStatusResponse,
-  HomeResponse,
-  MySpotsResponse,
-  ProfileResponse,
-  RankingResponse,
-  SpotsResponse,
-  SpotDetailResponse,
-} from '@/types/api';
-
 type QueryParams = Record<string, string | string[] | undefined>;
 
 function buildQueryString(params: QueryParams = {}) {
@@ -34,38 +24,38 @@ async function getJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
-export async function fetchHomeSpots(params: QueryParams = {}): Promise<HomeResponse> {
+export async function fetchHomeSpots(params: QueryParams = {}) {
   const qs = buildQueryString(params);
-  return getJson<HomeResponse>(`/api/home/${qs}`);
+  return getJson<any>(`/api/home/${qs}`);
 }
 
-export async function fetchAuthStatus(): Promise<AuthStatusResponse> {
-  return getJson<AuthStatusResponse>('/api/auth/me/');
+export async function fetchAuthStatus() {
+  return getJson<any>('/api/auth/me/');
 }
 
-export async function fetchMySpots(): Promise<MySpotsResponse> {
-  return getJson<MySpotsResponse>('/api/my-spots/');
+export async function fetchMySpots() {
+  return getJson<any>('/api/my-spots/');
 }
 
-export async function fetchSpotDetail(spotId: number): Promise<SpotDetailResponse> {
-  return getJson<SpotDetailResponse>(`/api/spots/${spotId}/detail/`);
+export async function fetchSpotDetail(spotId: number) {
+  return getJson<any>(`/api/spots/${spotId}/detail/`);
 }
 
-export async function fetchProfile(): Promise<ProfileResponse> {
-  return getJson<ProfileResponse>('/api/profile/');
+export async function fetchProfile() {
+  return getJson<any>('/api/profile/');
 }
 
-export async function fetchRecentSpots(): Promise<SpotsResponse> {
-  return getJson<SpotsResponse>('/api/recent-spots/');
+export async function fetchRecentSpots() {
+  return getJson<any>('/api/recent-spots/');
 }
 
-export async function fetchRanking(): Promise<RankingResponse> {
-  return getJson<RankingResponse>('/api/ranking/');
+export async function fetchRanking() {
+  return getJson<any>('/api/ranking/');
 }
 
-export async function fetchSpotsByFilter(params: QueryParams = {}): Promise<SpotsResponse> {
+export async function fetchSpotsByFilter(params: QueryParams = {}) {
   const qs = buildQueryString(params);
-  return getJson<SpotsResponse>(`/api/spots/${qs}`);
+  return getJson<any>(`/api/spots/${qs}`);
 }
 
 
