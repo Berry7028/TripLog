@@ -29,6 +29,7 @@ from .services.interactions import (
 )
 from .services.serializers import (
     serialize_review,
+    serialize_review_activity,
     serialize_spot_brief,
     serialize_spot_detail,
     serialize_spot_summary,
@@ -150,6 +151,15 @@ def auth_status(request):
         return JsonResponse({"is_authenticated": False})
 
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    user_spots = (
+        request.user.spot_set.select_related("created_by")
+        .prefetch_related("tags")
+        .order_by("-created_at")
+    )
+    user_reviews = (
+        request.user.review_set.select_related("spot")
+        .order_by("-created_at")
+    )
     return JsonResponse(
         {
             "is_authenticated": True,
@@ -157,7 +167,21 @@ def auth_status(request):
                 "id": request.user.id,
                 "username": request.user.username,
                 "email": request.user.email,
+                "date_joined": request.user.date_joined.isoformat()
+                if request.user.date_joined
+                else None,
                 "profile": serialize_user_profile(profile),
+            },
+            "stats": {
+                "spot_count": user_spots.count(),
+                "review_count": user_reviews.count(),
+                "favorite_count": profile.favorite_spots.count(),
+            },
+            "recent_activity": {
+                "spots": [serialize_spot_summary(spot) for spot in user_spots[:3]],
+                "reviews": [
+                    serialize_review_activity(review) for review in user_reviews[:3]
+                ],
             },
         }
     )

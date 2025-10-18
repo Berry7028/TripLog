@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, useState } from 'react';
@@ -8,9 +9,10 @@ import type { ProfileResponse } from '@/types/api';
 
 interface ProfileFormProps {
   profile: ProfileResponse['profile'];
+  user: ProfileResponse['user'];
 }
 
-export default function ProfileForm({ profile }: ProfileFormProps) {
+export default function ProfileForm({ profile, user }: ProfileFormProps) {
   const router = useRouter();
   const [bio, setBio] = useState(profile.bio);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar);
@@ -54,11 +56,14 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-900">プロフィール</h2>
+    <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <header className="space-y-1">
+        <h2 className="text-lg font-semibold text-slate-900">プロフィール設定</h2>
+        <p className="text-sm text-slate-500">ユーザー情報と自己紹介を更新できます。</p>
+      </header>
       {error ? <p className="text-sm text-rose-500">{error}</p> : null}
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="flex flex-col items-center gap-2">
+      <div className="grid gap-6 md:grid-cols-[auto,1fr]">
+        <div className="flex flex-col items-center gap-3">
           {avatarPreview ? (
             <Image
               src={avatarPreview}
@@ -72,9 +77,34 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
               No Avatar
             </div>
           )}
-          <input type="file" accept="image/*" onChange={handleFileChange} className="text-xs" />
+          <label className="flex w-full flex-col items-center gap-2 text-xs text-slate-500">
+            <span>アバター画像を選択</span>
+            <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-xs" />
+          </label>
         </div>
-        <div className="flex-1">
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm text-slate-600">
+              ユーザー名
+              <input
+                type="text"
+                value={user.username}
+                disabled
+                className="rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-600"
+              />
+              <span className="text-xs text-slate-400">ユーザー名は変更できません。</span>
+            </label>
+            <label className="flex flex-col gap-2 text-sm text-slate-600">
+              メールアドレス
+              <input
+                type="email"
+                value={user.email || '未設定'}
+                disabled
+                className="rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-600"
+              />
+              <span className="text-xs text-slate-400">変更が必要な場合は管理者にご連絡ください。</span>
+            </label>
+          </div>
           <label className="flex flex-col gap-2 text-sm text-slate-600">
             自己紹介
             <textarea
@@ -83,16 +113,25 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
               rows={4}
               className="rounded-2xl border border-slate-300 px-3 py-2"
             />
+            <span className="text-xs text-slate-400">旅行の好みやおすすめのスポットについて共有しましょう。</span>
           </label>
         </div>
       </div>
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white"
-      >
-        更新する
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <Link
+          href="/my-spots"
+          className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+        >
+          マイページに戻る
+        </Link>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isSubmitting ? '更新中...' : '保存する'}
+        </button>
+      </div>
     </form>
   );
 }

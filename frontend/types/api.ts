@@ -79,6 +79,28 @@ export interface MySpotsResponse {
   spots: SpotSummary[];
 }
 
+export interface ProfileStats {
+  spot_count: number;
+  review_count: number;
+  favorite_count: number;
+}
+
+export interface ReviewActivity {
+  id: number;
+  rating: number;
+  comment: string;
+  created_at: string | null;
+  spot: {
+    id: number;
+    title: string;
+  };
+}
+
+export interface ProfileRecentActivity {
+  spots: SpotSummary[];
+  reviews: ReviewActivity[];
+}
+
 export interface ProfileResponse {
   profile: {
     bio: string;
@@ -89,7 +111,10 @@ export interface ProfileResponse {
     id: number;
     username: string;
     email: string;
+    date_joined?: string | null;
   };
+  stats?: ProfileStats;
+  recent_activity?: ProfileRecentActivity;
 }
 
 export interface AuthStatusResponse {
@@ -98,8 +123,11 @@ export interface AuthStatusResponse {
     id: number;
     username: string;
     email: string;
+    date_joined?: string | null;
     profile: ProfileResponse['profile'];
   };
+  stats?: ProfileStats;
+  recent_activity?: ProfileRecentActivity;
 }
 
 export interface ApiResponse<T = unknown> {
