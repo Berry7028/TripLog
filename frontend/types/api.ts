@@ -51,6 +51,7 @@ export interface HomeResponse {
   recommendation_source?: string | null;
   recommendation_notice?: string | null;
   recommendation_scored_ids?: number[];
+  viewer_is_authenticated: boolean;
 }
 
 export interface SpotDetailResponse {
@@ -123,6 +124,7 @@ export interface AuthStatusResponse {
     id: number;
     username: string;
     email: string;
+    is_staff?: boolean;
     date_joined?: string | null;
     profile: ProfileResponse['profile'];
   };

@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import LogoutButton from './LogoutButton';
 import { fetchAuthStatus } from '@/lib/server-api';
 
+interface CurrentUser {
+  id: number;
+  username: string;
+  is_staff?: boolean;
+}
+
 interface HeaderProps {
-  currentUser?: {
-    id: number;
-    username: string;
-  } | null;
+  currentUser?: CurrentUser | null;
 }
 
 const navItems = [
@@ -20,16 +24,33 @@ const navItems = [
   { href: '/plan', label: 'ぷらん' },
 ];
 
+function isActivePath(currentPath: string, target: string): boolean {
+  if (target === '/') {
+    return currentPath === '/';
+  }
+  return currentPath === target || currentPath.startsWith(`${target}/`);
+}
+
 export default function Header({ currentUser: initialUser }: HeaderProps) {
-  const [currentUser, setCurrentUser] = useState(initialUser);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null | undefined>(initialUser);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortMode, setSortMode] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (initialUser === undefined) {
       fetchAuthStatus()
         .then((auth) => {
           if (auth.is_authenticated && auth.user) {
-            setCurrentUser({ id: auth.user.id, username: auth.user.username });
+            setCurrentUser({
+              id: auth.user.id,
+              username: auth.user.username,
+              is_staff: auth.user.is_staff,
+            });
           } else {
             setCurrentUser(null);
           }
@@ -37,101 +58,145 @@ export default function Header({ currentUser: initialUser }: HeaderProps) {
         .catch(() => {
           setCurrentUser(null);
         });
+    } else {
+      setCurrentUser(initialUser ?? null);
     }
   }, [initialUser]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/?search=${encodeURIComponent(searchQuery)}`;
+  useEffect(() => {
+    if (!searchParams) {
+      return;
     }
+    const nextSearch = searchParams.get('search') ?? '';
+    const nextSort = searchParams.get('sort');
+    setSearchQuery(nextSearch);
+    setSortMode(nextSort);
+  }, [searchParams]);
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+    if (sortMode) {
+      params.set('sort', sortMode);
+    }
+    const query = params.toString();
+    router.push(query ? `/?${query}` : '/');
+    router.refresh();
+    setIsMenuOpen(false);
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
-    window.location.href = '/';
+    setSortMode(null);
+    router.push('/');
+    router.refresh();
+    setIsMenuOpen(false);
   };
 
   return (
-    <nav className="shadow-sm" style={{ backgroundColor: 'var(--brand-teal)' }}>
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between py-3">
-          <Link href="/" className="text-xl font-bold text-white">
-            <i className="fas fa-map-marked-alt me-2"></i>旅ログまっぷ
-          </Link>
+    <nav className="navbar navbar-expand-lg navbar-dark navbar-custom shadow-sm">
+      <div className="container">
+        <Link href="/" className="navbar-brand" onClick={() => setIsMenuOpen(false)}>
+          <i className="fas fa-map-marked-alt me-2"></i>旅ログまっぷ
+        </Link>
+        <button
+          className="navbar-toggler"
+          type="button"
+          aria-controls="navbarNav"
+          aria-expanded={isMenuOpen}
+          aria-label="メニューを切り替え"
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
 
-          <div className="hidden items-center gap-4 md:flex">
+        <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-white transition hover:text-gray-100"
-              >
-                {item.label}
-              </Link>
+              <li className="nav-item" key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`nav-link ${isActivePath(pathname, item.href) ? 'active' : ''}`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center me-3">
-            <div className="relative flex items-center">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="d-flex me-lg-3 my-3 my-lg-0 ms-lg-auto w-100 w-lg-auto"
+            role="search"
+          >
+            <div className="input-group search-group w-100">
               <input
                 type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                className="form-control search-input"
                 placeholder="検索"
-                className="rounded-pill border-0 px-4 py-1 pr-10 text-sm focus:outline-none"
-                style={{ minWidth: '200px' }}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                aria-label="スポットを検索"
               />
-              {searchQuery && (
+              {searchQuery ? (
                 <button
                   type="button"
+                  className="btn btn-clear"
                   onClick={handleClearSearch}
-                  className="absolute right-3 text-gray-500 hover:text-gray-700"
+                  aria-label="検索条件をクリア"
                 >
                   ×
                 </button>
-              )}
+              ) : null}
             </div>
           </form>
 
-          <div className="flex items-center gap-3">
+          <ul className="navbar-nav align-items-lg-center">
             {currentUser ? (
-              <>
-                <Link
-                  href="/my-spots"
-                  className="flex items-center justify-center rounded-full text-white"
-                  style={{
-                    width: '34px',
-                    height: '34px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.13)',
-                  }}
-                >
+              <li className="nav-item d-flex align-items-center">
+                <Link href="/my-spots" className="avatar-circle me-2" onClick={() => setIsMenuOpen(false)}>
                   <i className="fas fa-user"></i>
                 </Link>
-                <Link href="/profile" className="text-white hover:text-gray-100 hidden md:inline">
+                <Link href="/profile" className="nav-link px-0 me-lg-2 text-white" onClick={() => setIsMenuOpen(false)}>
                   {currentUser.username}
                 </Link>
-                <LogoutButton />
-              </>
+                {currentUser.is_staff ? (
+                  <a
+                    href="/manage/"
+                    className="nav-link px-0 me-lg-2 text-white"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <i className="fas fa-cog me-1"></i>管理
+                  </a>
+                ) : null}
+                <LogoutButton
+                  onLoggedOut={() => setIsMenuOpen(false)}
+                  className="btn btn-link nav-link p-0 text-white d-flex align-items-center"
+                />
+              </li>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="text-white hover:text-gray-100 flex items-center gap-1"
-                >
-                  <i className="fas fa-sign-in-alt"></i>
-                  <span className="hidden md:inline">ログイン</span>
-                </Link>
-                <Link
-                  href="/register"
-                  className="text-white hover:text-gray-100 flex items-center gap-1"
-                >
-                  <i className="fas fa-user-plus"></i>
-                  <span className="hidden md:inline">新規登録</span>
-                </Link>
+                <li className="nav-item">
+                  <Link href="/login" className="nav-link" onClick={() => setIsMenuOpen(false)}>
+                    <i className="fas fa-sign-in-alt me-1"></i>ログイン
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/register" className="nav-link" onClick={() => setIsMenuOpen(false)}>
+                    <i className="fas fa-user-plus me-1"></i>新規登録
+                  </Link>
+                </li>
               </>
             )}
-          </div>
+          </ul>
         </div>
       </div>
     </nav>

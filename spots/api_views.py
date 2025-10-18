@@ -74,6 +74,9 @@ def home_data(request):
             "recommendation_source": result.recommendation_source,
             "recommendation_notice": result.recommendation_notice,
             "recommendation_scored_ids": list(recommendation_ids),
+            "viewer_is_authenticated": getattr(
+                request.user, "is_authenticated", False
+            ),
         }
     )
 
@@ -166,6 +169,7 @@ def auth_status(request):
                 "id": request.user.id,
                 "username": request.user.username,
                 "email": request.user.email,
+                "is_staff": request.user.is_staff,
                 "date_joined": request.user.date_joined.isoformat()
                 if request.user.date_joined
                 else None,

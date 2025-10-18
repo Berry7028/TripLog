@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 
 import type { ProfileResponse } from '@/types/api';
 
@@ -21,10 +20,15 @@ export default function ProfileForm({ profile, user }: ProfileFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
+    const file = event.target.files?.[0] ?? null;
     setAvatarFile(file);
+    if (avatarPreview && avatarPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(avatarPreview);
+    }
     if (file) {
       setAvatarPreview(URL.createObjectURL(file));
+    } else {
+      setAvatarPreview(profile.avatar ?? null);
     }
   };
 
@@ -39,99 +43,112 @@ export default function ProfileForm({ profile, user }: ProfileFormProps) {
       formData.set('avatar', avatarFile);
     }
 
-    const response = await fetch('/api/profile/update', {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const detail = await response.json();
-      const errors = detail.errors as Record<string, string[]> | undefined;
-      const firstError = errors ? Object.values(errors)[0]?.[0] : null;
-      const errorMessage = detail.error || firstError;
-      setError(errorMessage || 'プロフィールを更新できませんでした。');
-    } else {
-      router.refresh();
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        const errors = detail.errors as Record<string, string[]> | undefined;
+        const firstError = errors ? Object.values(errors)[0]?.[0] : undefined;
+        const message = detail.error || firstError || 'プロフィールを更新できませんでした。';
+        setError(message);
+      } else {
+        router.refresh();
+      }
+    } catch (submitError) {
+      setError('プロフィールを更新できませんでした。');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview && avatarPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold text-slate-900">プロフィール設定</h2>
-        <p className="text-sm text-slate-500">ユーザー情報と自己紹介を更新できます。</p>
-      </header>
-      {error ? <p className="text-sm text-rose-500">{error}</p> : null}
-      <div className="grid gap-6 md:grid-cols-[auto,1fr]">
-        <div className="flex flex-col items-center gap-3">
+    <form onSubmit={handleSubmit} encType="multipart/form-data">
+      {error ? (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="row">
+        <div className="col-md-4 text-center">
           {avatarPreview ? (
-            <Image
+            <img
               src={avatarPreview}
-              alt="avatar preview"
-              width={120}
-              height={120}
-              className="h-28 w-28 rounded-full object-cover"
+              alt="アバター"
+              className="img-thumbnail mb-3"
+              style={{ width: '150px', height: '150px', objectFit: 'cover' }}
             />
           ) : (
-            <div className="flex h-28 w-28 items-center justify-center rounded-full bg-slate-200 text-slate-500">
-              No Avatar
+            <div
+              className="bg-light d-flex align-items-center justify-content-center mb-3"
+              style={{ width: '150px', height: '150px', margin: '0 auto' }}
+            >
+              <i className="fas fa-user fa-4x text-muted"></i>
             </div>
           )}
-          <label className="flex w-full flex-col items-center gap-2 text-xs text-slate-500">
-            <span>アバター画像を選択</span>
-            <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-xs" />
-          </label>
-        </div>
-        <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-2 text-sm text-slate-600">
-              ユーザー名
-              <input
-                type="text"
-                value={user.username}
-                disabled
-                className="rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-600"
-              />
-              <span className="text-xs text-slate-400">ユーザー名は変更できません。</span>
+
+          <div className="mb-3">
+            <label htmlFor="profile-avatar" className="form-label">
+              アバター画像
             </label>
-            <label className="flex flex-col gap-2 text-sm text-slate-600">
-              メールアドレス
-              <input
-                type="email"
-                value={user.email || '未設定'}
-                disabled
-                className="rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-600"
-              />
-              <span className="text-xs text-slate-400">変更が必要な場合は管理者にご連絡ください。</span>
-            </label>
+            <input
+              id="profile-avatar"
+              type="file"
+              accept="image/*"
+              className="form-control"
+              onChange={handleFileChange}
+            />
           </div>
-          <label className="flex flex-col gap-2 text-sm text-slate-600">
-            自己紹介
+        </div>
+
+        <div className="col-md-8">
+          <div className="mb-3">
+            <label className="form-label">ユーザー名</label>
+            <input type="text" className="form-control" value={user.username} readOnly />
+            <div className="form-text">ユーザー名は変更できません。</div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">メールアドレス</label>
+            <input type="email" className="form-control" value={user.email || '未設定'} readOnly />
+            <div className="form-text">メールアドレスの変更は管理者にお問い合わせください。</div>
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="profile-bio" className="form-label">
+              自己紹介
+            </label>
             <textarea
+              id="profile-bio"
+              className="form-control"
+              rows={4}
               value={bio}
               onChange={(event) => setBio(event.target.value)}
-              rows={4}
-              className="rounded-2xl border border-slate-300 px-3 py-2"
-            />
-            <span className="text-xs text-slate-400">旅行の好みやおすすめのスポットについて共有しましょう。</span>
-          </label>
+            ></textarea>
+            <div className="form-text">あなたの旅行の趣味や好きな場所について教えてください。</div>
+          </div>
         </div>
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <Link
-          href="/my-spots"
-          className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-        >
-          マイページに戻る
+
+      <div className="d-grid gap-2 d-md-flex justify-content-md-end">
+        <Link href="/my-spots" className="btn btn-secondary me-md-2">
+          <i className="fas fa-arrow-left me-2"></i>マイページに戻る
         </Link>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {isSubmitting ? '更新中...' : '保存する'}
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+          <i className="fas fa-save me-2"></i>
+          {isSubmitting ? '保存中…' : '保存する'}
         </button>
       </div>
     </form>
