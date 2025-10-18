@@ -1,3 +1,5 @@
+export type SpotFilter = 'all' | 'mine' | 'others';
+
 export interface SpotSummary {
   id: number;
   title: string;
