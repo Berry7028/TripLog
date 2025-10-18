@@ -1,27 +1,32 @@
+'use server';
+
+import { cookies } from 'next/headers';
+
 import { buildApiUrl } from './config';
+import { buildQueryString, type QueryParams } from './api-helpers';
 
-type QueryParams = Record<string, string | string[] | undefined>;
+async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const cookieStore = cookies();
+  const cookieHeader = cookieStore.toString();
 
-function buildQueryString(params: QueryParams = {}) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach((v) => qs.append(key, v));
-    } else if (value !== undefined) {
-      qs.set(key, value);
-    }
-  });
-  const str = qs.toString();
-  return str ? `?${str}` : '';
-}
-
-async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(buildApiUrl(path), { cache: 'no-store' });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+  const headers = new Headers(init.headers);
+  if (cookieHeader) {
+    headers.set('Cookie', cookieHeader);
   }
-  return res.json();
+
+  const response = await fetch(buildApiUrl(path), {
+    ...init,
+    headers,
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  return response.json() as Promise<T>;
 }
 
 export async function fetchHomeSpots(params: QueryParams = {}) {
@@ -57,5 +62,3 @@ export async function fetchSpotsByFilter(params: QueryParams = {}) {
   const qs = buildQueryString(params);
   return getJson<any>(`/api/spots/${qs}`);
 }
-
-

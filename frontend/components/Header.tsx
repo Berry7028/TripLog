@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import LogoutButton from './LogoutButton';
-import { fetchAuthStatus } from '@/lib/server-api';
+import { fetchAuthStatus } from '@/lib/client-api';
 
 interface HeaderProps {
   currentUser?: {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import SpotMap from './SpotMap';
 import SpotMapSidebar from './SpotMapSidebar';
-import { fetchSpotsByFilter } from '@/lib/server-api';
+import { fetchSpotsByFilter } from '@/lib/client-api';
 import type { SpotFilter, SpotSummary } from '@/types/api';
 
 interface SpotMapLayoutProps {
