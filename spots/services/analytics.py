@@ -43,7 +43,7 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
         return RecommendationResult(spots_list)
 
     # 全スポット情報をAIに渡して、未閲覧スポットも含めて分析させる
-    api_scores = _request_scores_from_openrouter(user, interactions, all_spots=spots_list)
+    api_scores = _request_scores_from_openai(user, interactions, all_spots=spots_list)
     scores: Dict[int, float]
     source = 'none'
 
@@ -96,12 +96,12 @@ def _compute_fallback_score(interaction: UserSpotInteraction) -> float:
     return view_bonus + recency_bonus + duration_bonus
 
 
-def _request_scores_from_openrouter(
+def _request_scores_from_openai(
     user,
     user_interactions: Iterable[UserSpotInteraction],
     all_spots: Sequence = None,
 ) -> Dict[int, float]:
-    """OpenRouter API からスコアを取得する。失敗時は空 dict を返す。
+    """OpenAI API からスコアを取得する。失敗時は空 dict を返す。
     
     Args:
         user: 対象ユーザー
@@ -109,18 +109,18 @@ def _request_scores_from_openrouter(
         all_spots: 全スポットのリスト。Noneの場合は閲覧済みスポットのみスコアリング
     """
 
-    api_key = getattr(settings, 'OPENROUTER_API_KEY', None)
+    api_key = getattr(settings, 'OPENAI_API_KEY', None)
     if not api_key:
-        logger.debug('OPENROUTER_API_KEY が設定されていないため、API連携をスキップします。')
+        logger.debug('OPENAI_API_KEY が設定されていないため、API連携をスキップします。')
         return {}
 
     url = getattr(
         settings,
-        'OPENROUTER_RECOMMENDATION_URL',
-        'https://openrouter.ai/api/v1/chat/completions',
+        'OPENAI_RECOMMENDATION_URL',
+        'https://api.openai.com/v1/chat/completions',
     )
-    model = getattr(settings, 'OPENROUTER_RECOMMENDATION_MODEL', 'openai/gpt-4o-mini')
-    timeout = getattr(settings, 'OPENROUTER_TIMEOUT', 15)
+    model = getattr(settings, 'OPENAI_RECOMMENDATION_MODEL', 'gpt-4o-mini')
+    timeout = getattr(settings, 'OPENAI_TIMEOUT', 15)
 
     # ユーザーの閲覧履歴
     interaction_payload = [_serialize_interaction(interaction) for interaction in user_interactions]
@@ -166,8 +166,6 @@ def _request_scores_from_openrouter(
 
     headers = {
         'Authorization': f'Bearer {api_key}',
-        'HTTP-Referer': getattr(settings, 'OPENROUTER_SITE_URL', 'https://example.com'),
-        'X-Title': getattr(settings, 'OPENROUTER_APP_NAME', 'TripLog Recommendations'),
         'Content-Type': 'application/json',
     }
 
@@ -180,25 +178,25 @@ def _request_scores_from_openrouter(
         response = requests.post(url, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
     except Exception as exc:  # pragma: no cover - ネットワーク例外はログのみ
-        logger.warning('OpenRouter API の呼び出しに失敗しました: %s', exc)
+        logger.warning('OpenAI API の呼び出しに失敗しました: %s', exc)
         return {}
 
     try:
         response_data = response.json()
     except ValueError:  # pragma: no cover - 想定外のレスポンス
-        logger.warning('OpenRouter API のレスポンスが JSON ではありません。')
+        logger.warning('OpenAI API のレスポンスが JSON ではありません。')
         return {}
 
     try:
         message_content = response_data['choices'][0]['message']['content']
     except (KeyError, IndexError, TypeError):
-        logger.warning('OpenRouter API のレスポンス形式が想定外です: %s', response_data)
+        logger.warning('OpenAI API のレスポンス形式が想定外です: %s', response_data)
         return {}
 
     try:
         parsed = json.loads(message_content)
     except json.JSONDecodeError:
-        logger.warning('OpenRouter API の応答が JSON 文字列ではありません: %s', message_content)
+        logger.warning('OpenAI API の応答が JSON 文字列ではありません: %s', message_content)
         return {}
 
     scores: Dict[int, float] = {}
