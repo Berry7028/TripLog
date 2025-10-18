@@ -48,7 +48,10 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
     source = 'none'
 
     if api_scores:
-        scores = api_scores
+        scores = {
+            spot_id: round(float(score_value), 4)
+            for spot_id, score_value in api_scores.items()
+        }
         source = 'api'
     else:
         fallback_scores = {
@@ -56,7 +59,10 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
             for interaction in interactions
         }
         if any(score > 0 for score in fallback_scores.values()):
-            scores = fallback_scores
+            scores = {
+                spot_id: round(float(score_value), 4)
+                for spot_id, score_value in fallback_scores.items()
+            }
             source = 'fallback'
         else:
             return RecommendationResult(spots_list)
@@ -93,7 +99,7 @@ def _compute_fallback_score(interaction: UserSpotInteraction) -> float:
 
     duration_bonus = min(duration_minutes, 60.0) * 0.5
 
-    return view_bonus + recency_bonus + duration_bonus
+    return round(view_bonus + recency_bonus + duration_bonus, 4)
 
 
 def _request_scores_from_openrouter(
@@ -145,7 +151,8 @@ def _request_scores_from_openrouter(
         '2. 全スポットリスト(target_spots)には、ユーザーがまだ見ていないスポットも含まれています。\n'
         '3. 閲覧済みスポットと類似のタグ、説明、テーマを持つ未閲覧スポットは、高いスコアを付けてください。\n'
         '4. ユーザーの興味・嗜好に合致する新しい発見となるスポットを積極的に推薦してください。\n'
-        '5. 出力形式: {"scores": [{"spot_id": number, "score": number, "reason": string}]}\n'
+        '5. score フィールドは必ず小数点付き(例: 82.50)で表現し、100.00 を超えないようにしてください。\n'
+        '6. 出力形式: {"scores": [{"spot_id": number, "score": number, "reason": string}]}\n'
         '   reasonには推薦理由を簡潔に記述してください(任意)。'
     )
 

@@ -1,7 +1,11 @@
 """スタッフ向けのカスタム管理ダッシュボード用ビュー群。"""
 from __future__ import annotations
 
-from datetime import timedelta
+from collections import OrderedDict
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.forms import AdminPasswordChangeForm
@@ -612,6 +616,29 @@ class SpotViewAdminListView(StaffRequiredMixin, ListView):
         return context
 
 
+@dataclass
+class UserScoreEntry:
+    """ユーザーごとのスポットスコアをテンプレート描画用に整形したエントリ。"""
+
+    id: int
+    spot_id: int
+    spot_title: str
+    score: float
+    source: str
+    updated_at: datetime
+    reason: str
+
+
+@dataclass
+class UserScoreFolder:
+    """ユーザー単位でスコアを束ねたフォルダー情報。"""
+
+    user: User
+    scores: List[UserScoreEntry]
+    score_count: int
+    last_updated: Optional[datetime]
+    top_score: Optional[float]
+
 class RecommendationAdminView(StaffRequiredMixin, TemplateView):
     """AIおすすめ解析の管理画面"""
     template_name = 'spots/admin/recommendation_dashboard.html'
@@ -686,47 +713,159 @@ class RecommendationAdminView(StaffRequiredMixin, TemplateView):
         return redirect('admin_recommendation')
 
 
-class RecommendationUserScoreListView(StaffRequiredMixin, ListView):
-    """ユーザー別のおすすめスコア一覧"""
+class RecommendationUserScoreListView(StaffRequiredMixin, TemplateView):
+    """ユーザーごとにフォルダー形式でスコアを閲覧できる管理画面。"""
+
     template_name = 'spots/admin/recommendation_scores.html'
-    model = UserRecommendationScore
-    context_object_name = 'scores'
-    paginate_by = 50
-    
-    def get_queryset(self):
-        queryset = UserRecommendationScore.objects.select_related(
-            'user', 'spot'
-        ).order_by('-score', '-updated_at')
-        
-        user_id = self.request.GET.get('user')
-        if user_id:
-            queryset = queryset.filter(user_id=user_id)
-        
-        spot_id = self.request.GET.get('spot')
-        if spot_id:
-            queryset = queryset.filter(spot_id=spot_id)
-        
-        source = self.request.GET.get('source')
-        if source:
-            queryset = queryset.filter(source=source)
-        
-        return queryset
-    
+
+    def _get_filter_values(self) -> Dict[str, str]:
+        request = self.request
+        return {
+            'user': request.GET.get('user', '').strip(),
+            'spot': request.GET.get('spot', '').strip(),
+            'source': request.GET.get('source', '').strip(),
+            'min_score': request.GET.get('min_score', '').strip(),
+            'query': request.GET.get('q', '').strip(),
+        }
+
+    def _apply_filters(
+        self,
+        queryset,
+        filters: Dict[str, str],
+    ) -> tuple[List[UserRecommendationScore], List[str]]:
+        filter_errors: List[str] = []
+        qs = queryset
+
+        if filters['user']:
+            try:
+                qs = qs.filter(user_id=int(filters['user']))
+            except ValueError:
+                filter_errors.append('ユーザーIDは数値で指定してください。')
+
+        if filters['spot']:
+            try:
+                qs = qs.filter(spot_id=int(filters['spot']))
+            except ValueError:
+                filter_errors.append('スポットIDは数値で指定してください。')
+
+        if filters['source']:
+            qs = qs.filter(source=filters['source'])
+
+        if filters['min_score']:
+            try:
+                min_score_value = float(filters['min_score'])
+            except ValueError:
+                filter_errors.append('最小スコアは数値で指定してください。')
+            else:
+                qs = qs.filter(score__gte=min_score_value)
+
+        if filters['query']:
+            query = filters['query']
+            qs = qs.filter(
+                Q(user__username__icontains=query)
+                | Q(spot__title__icontains=query)
+                | Q(spot__description__icontains=query)
+            )
+
+        score_list = list(
+            qs.select_related('user', 'spot').order_by(
+                'user__username', '-score', '-updated_at'
+            )
+        )
+        return score_list, filter_errors
+
+    def _build_user_folders(
+        self,
+        scores: List[UserRecommendationScore],
+    ) -> List[UserScoreFolder]:
+        folders: "OrderedDict[int, UserScoreFolder]" = OrderedDict()
+
+        for score in scores:
+            entry = UserScoreEntry(
+                id=score.id,
+                spot_id=score.spot_id,
+                spot_title=score.spot.title,
+                score=round(float(score.score), 4),
+                source=score.source,
+                updated_at=score.updated_at,
+                reason=score.reason,
+            )
+
+            folder = folders.get(score.user_id)
+            if folder is None:
+                folder = UserScoreFolder(
+                    user=score.user,
+                    scores=[entry],
+                    score_count=1,
+                    last_updated=score.updated_at,
+                    top_score=entry.score,
+                )
+                folders[score.user_id] = folder
+            else:
+                folder.scores.append(entry)
+                folder.score_count += 1
+                if folder.last_updated is None or score.updated_at > folder.last_updated:
+                    folder.last_updated = score.updated_at
+                if folder.top_score is None or entry.score > folder.top_score:
+                    folder.top_score = entry.score
+
+        return list(folders.values())
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({
-            'users': User.objects.order_by('username'),
-            'spots': Spot.objects.order_by('title'),
-            'selected_user': self.request.GET.get('user', ''),
-            'selected_spot': self.request.GET.get('spot', ''),
-            'selected_source': self.request.GET.get('source', ''),
-            'source_choices': ['api', 'fallback', 'manual'],
-        })
+        filters = self._get_filter_values()
+
+        base_queryset = UserRecommendationScore.objects.all()
+        score_list, filter_errors = self._apply_filters(base_queryset, filters)
+        user_folders = self._build_user_folders(score_list)
+
+        total_scores = len(score_list)
+        folder_count = len(user_folders)
+
+        source_choices = list(
+            UserRecommendationScore.objects.order_by('source')
+            .values_list('source', flat=True)
+            .distinct()
+        )
+
+        context.update(
+            {
+                'user_folders': user_folders,
+                'folder_count': folder_count,
+                'total_scores': total_scores,
+                'filters': filters,
+                'filter_errors': filter_errors,
+                'users': User.objects.filter(
+                    recommendation_scores__isnull=False
+                )
+                .distinct()
+                .order_by('username'),
+                'spots': Spot.objects.order_by('title'),
+                'source_choices': source_choices,
+            }
+        )
         return context
-    
+
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action')
-        
+
+        filter_map = {
+            'user': 'user',
+            'spot': 'spot',
+            'source': 'source',
+            'min_score': 'min_score',
+            'query': 'q',
+        }
+        preserved_params = {}
+        for context_key, param_name in filter_map.items():
+            value = request.POST.get(f'filter__{context_key}', '').strip()
+            if value:
+                preserved_params[param_name] = value
+
+        redirect_url = request.path
+        if preserved_params:
+            redirect_url = f"{redirect_url}?{urlencode(preserved_params)}"
+
         if action == 'delete_selected':
             selected_ids = request.POST.getlist('selected')
             if selected_ids:
@@ -770,8 +909,8 @@ class RecommendationUserScoreListView(StaffRequiredMixin, ListView):
                             messages.warning(request, f'{user.username} の閲覧履歴がありません。')
                     except Exception as e:
                         messages.error(request, f'エラー: {str(e)}')
-        
-        return redirect(request.path + '?' + request.GET.urlencode())
+
+        return redirect(redirect_url)
 
 
 class RecommendationJobLogListView(StaffRequiredMixin, ListView):
