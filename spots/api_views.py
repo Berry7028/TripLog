@@ -7,7 +7,6 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
@@ -270,10 +269,15 @@ def register_api(request):
 
 
 @csrf_exempt
-@login_required
 @require_http_methods(["GET", "POST"])
 def profile_api(request):
     """プロフィール情報の取得・更新。"""
+
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"success": False, "error": "ログインが必要です。"},
+            status=401,
+        )
 
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == "GET":
@@ -304,10 +308,15 @@ def profile_api(request):
 
 
 @csrf_exempt
-@login_required
 @require_POST
 def add_review_api(request, spot_id: int):
     """レビュー投稿API。"""
+
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"success": False, "error": "ログインが必要です。"},
+            status=401,
+        )
 
     spot = get_object_or_404(Spot, id=spot_id)
 
@@ -343,10 +352,15 @@ def add_review_api(request, spot_id: int):
 
 
 @csrf_exempt
-@login_required
 @require_POST
 def toggle_favorite_api(request, spot_id: int):
     """お気に入り状態をトグルするAPI。"""
+
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"success": False, "error": "ログインが必要です。"},
+            status=401,
+        )
 
     spot = get_object_or_404(Spot, id=spot_id)
     try:
@@ -361,10 +375,15 @@ def toggle_favorite_api(request, spot_id: int):
 
 
 @csrf_exempt
-@login_required
 @require_POST
 def add_spot_via_api(request):
     """スポット投稿API (FormData対応)。"""
+
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"success": False, "error": "ログインが必要です。"},
+            status=401,
+        )
 
     form = SpotForm(request.POST, request.FILES)
     if not form.is_valid():
@@ -383,10 +402,15 @@ def add_spot_via_api(request):
 
 
 @csrf_exempt
-@login_required
 @require_POST
 def record_view_api(request, spot_id: int):
     """滞在時間の記録API。"""
+
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"success": False, "error": "ログインが必要です。"},
+            status=401,
+        )
 
     spot = get_object_or_404(Spot, id=spot_id)
     try:
@@ -400,9 +424,14 @@ def record_view_api(request, spot_id: int):
 
 
 @require_GET
-@login_required
 def my_spots_data(request):
     """自分の投稿一覧を返す。"""
+
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {"success": False, "error": "ログインが必要です。"},
+            status=401,
+        )
 
     spots = (
         Spot.objects.filter(created_by=request.user)
