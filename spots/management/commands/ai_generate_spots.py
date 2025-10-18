@@ -14,14 +14,14 @@ from django.db import transaction
 from spots.models import Spot, Tag
 
 
-# Provider configurations
+# プロバイダー設定
 AI_PROVIDER = os.environ.get("AI_PROVIDER", "lmstudio").lower()
 
 if AI_PROVIDER == "openrouter":
     DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
     DEFAULT_MODEL = os.environ.get("OPENROUTER_RECOMMENDATION_MODEL", "x-ai/grok-4-fast:free")
     API_KEY_ENV = "OPENROUTER_API_KEY"
-else:  # lmstudio
+else:  # LM Studio を利用する場合
     DEFAULT_BASE_URL = os.environ.get("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
     DEFAULT_MODEL = os.environ.get("LMSTUDIO_MODEL", "qwen/qwen3-4b-2507")
     API_KEY_ENV = "LMSTUDIO_API_KEY"
@@ -118,7 +118,7 @@ def _create_spot_in_db(user, payload: Dict[str, Any]) -> Dict[str, Any]:
     image_url = (payload.get("image_url") or "").strip()
 
     with transaction.atomic():
-        # Avoid exact duplicates by (title, lat, lon) for same creator
+        # 同一作成者についてはタイトルと緯度経度が完全一致する重複登録を避ける
         spot = Spot.objects.filter(
             title=title, latitude=latitude, longitude=longitude, created_by=user
         ).first()
@@ -133,7 +133,7 @@ def _create_spot_in_db(user, payload: Dict[str, Any]) -> Dict[str, Any]:
                 is_ai_generated=True,
             )
 
-        # Tags
+        # タグを登録
         attached = []
         for name in tag_names:
             name = (name or "").strip()
@@ -143,7 +143,7 @@ def _create_spot_in_db(user, payload: Dict[str, Any]) -> Dict[str, Any]:
             spot.tags.add(tag)
             attached.append(tag.name)
 
-        # Optional image download
+        # 画像URLが指定されていればダウンロードして保存
         if image_url and not spot.image:
             content = _download_image(image_url)
             if content:
@@ -171,7 +171,7 @@ def _parse_tool_calls(resp_json: Dict[str, Any]) -> List[ToolCall]:
             try:
                 args = json.loads(args_raw)
             except Exception:
-                # Some models may emit non-strict JSON; attempt a fallback
+                # モデルによっては厳密でないJSONを返す場合があるため、フォールバックを試す
                 args = json.loads(args_raw.replace("\n", " "))
             tool_calls.append(
                 ToolCall(
@@ -246,7 +246,7 @@ class Command(BaseCommand):
     help = "Generate Spot records using LM Studio or OpenRouter tool-calling model."
 
     def add_arguments(self, parser):
-        # Accept only one positional argument: count
+        # 位置引数として受け付けるのは count のみ
         parser.add_argument(
             "count",
             type=int,
@@ -255,7 +255,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         count = int(options["count"]) if options.get("count") is not None else 0
-        # Defaults: minimal required by user. Theme kept internal and simple.
+        # デフォルト値: ユーザーが求める最小限のみ設定し、テーマは内部で簡潔に保持
         theme = "日本国内のおすすめ観光スポット"
         username = "ai"
         model = DEFAULT_MODEL
@@ -270,7 +270,7 @@ class Command(BaseCommand):
 
         user = _ensure_user(username)
 
-        # Preflight: server reachable and model available
+        # 事前確認: サーバーに接続でき、指定モデルが利用可能か検証
         _preflight_server(base_url, model, api_key)
 
         chat_endpoint = f"{base_url}/chat/completions"
@@ -347,7 +347,7 @@ class Command(BaseCommand):
             tool_calls = _parse_tool_calls(data)
 
             if not tool_calls:
-                # No tool calls produced; attempt to nudge the model
+                # ツール呼び出しが生成されなかった場合は追加指示で再試行
                 messages.append({
                     "role": "user",
                     "content": (
@@ -356,15 +356,15 @@ class Command(BaseCommand):
                 })
                 continue
 
-            # Record assistant message with tool_calls to keep the conversation coherent
-            messages.append(data["choices"][0]["message"])  # assistant with tool_calls
+            # 会話の整合性を保つため、tool_calls を含むアシスタント側メッセージを記録
+            messages.append(data["choices"][0]["message"])  # tool_calls を含むアシスタントメッセージ
 
-            # Execute all tool calls from this assistant message
+            # このアシスタントメッセージ内のツール呼び出しを順に実行
             for tc in tool_calls:
                 if created >= count:
                     break
                 if tc.name != "create_spot":
-                    # Ignore unknown tool names
+                    # 未知のツール名は無視してエラー応答を返す
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tc.id,

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
+"""Django の管理作業用コマンドラインユーティリティ。"""
 import os
 import sys
 
 
 def main():
-    """Run administrative tasks."""
+    """管理系タスクを実行する。"""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'travel_log_map.settings')
     try:
         from django.core.management import execute_from_command_line

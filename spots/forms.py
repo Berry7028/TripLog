@@ -8,7 +8,7 @@ from .models import Spot, Review, UserProfile, Tag
 
 
 def _normalize_tags(tags_text: str) -> list[str]:
-    """Clean up a comma separated tags string into a unique list."""
+    """カンマ区切りのタグ文字列を正規化し、一意なリストに変換する。"""
     seen = set()
     tags: list[str] = []
     for raw in (tags_text or '').split(','):

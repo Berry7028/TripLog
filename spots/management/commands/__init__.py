@@ -1,2 +1,2 @@
-"""Commands package for spots app."""
+"""spots アプリの管理コマンドをまとめるパッケージ。"""
 
