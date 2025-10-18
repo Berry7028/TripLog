@@ -17,69 +17,65 @@ function formatWeeklyViews(count?: number): string {
 export default function RankingList({ spots }: RankingListProps) {
   if (spots.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-        ランキングデータがまだありません。
+      <div className="text-center py-5">
+        <i className="far fa-eye-slash fa-4x text-muted mb-3"></i>
+        <p className="mb-0">直近7日間の閲覧データがありません。</p>
       </div>
     );
   }
 
   return (
-    <ol className="space-y-4">
+    <div className="row g-3">
       {spots.map((spot, index) => (
-        <li key={spot.id}>
-          <article className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:flex-row sm:items-stretch">
-            <div className="flex items-center justify-center rounded-xl bg-primary/10 px-6 py-4 text-3xl font-bold text-primary sm:text-4xl">
-              {index + 1}
-            </div>
-            <div className="flex flex-1 flex-col gap-4 sm:flex-row">
-              <div className="relative h-32 w-full overflow-hidden rounded-xl bg-slate-100 sm:h-32 sm:w-44">
-                {spot.image ? (
-                  <Image
-                    src={spot.image}
-                    alt={spot.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, 176px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">No Image</div>
+        <div key={spot.id} className="col-12">
+          <div className="card shadow-sm">
+            <div className="card-body d-flex align-items-center">
+              <div className="display-6 fw-bold me-3" style={{ width: '3rem', textAlign: 'center' }}>
+                {index + 1}
+              </div>
+              {spot.image && (
+                <Image
+                  src={spot.image}
+                  alt={spot.title}
+                  width={72}
+                  height={72}
+                  className="me-3 rounded"
+                  style={{ width: '72px', height: '72px', objectFit: 'cover' }}
+                />
+              )}
+              <div className="flex-grow-1">
+                <h5 className="mb-1">
+                  <Link href={`/spots/${spot.id}`} className="text-decoration-none">
+                    {spot.title}
+                  </Link>
+                </h5>
+                {spot.address && (
+                  <div className="text-muted small">
+                    <i className="fas fa-map-marker-alt me-1"></i>
+                    {spot.address}
+                  </div>
+                )}
+                {spot.tags.length > 0 && (
+                  <div className="mt-1">
+                    {spot.tags.map((tag) => (
+                      <span key={tag} className="badge bg-light text-dark border me-1">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
-              <div className="flex flex-1 flex-col justify-between gap-3">
-                <header className="space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-lg font-semibold text-slate-900">
-                      <Link href={`/spots/${spot.id}`} className="hover:text-primary">
-                        {spot.title}
-                      </Link>
-                    </h2>
-                    <span className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                      <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden />
-                      週間閲覧数: {formatWeeklyViews(spot.weekly_views)}
-                    </span>
-                  </div>
-                  {spot.address ? (
-                    <p className="truncate text-sm text-slate-500" title={spot.address}>
-                      {spot.address}
-                    </p>
-                  ) : null}
-                </header>
-                <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                  {spot.tags.length > 0
-                    ? spot.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-slate-100 px-2 py-1">
-                          #{tag}
-                        </span>
-                      ))
-                    : (
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-400">タグ未設定</span>
-                      )}
+              <div className="text-end" style={{ width: '8rem' }}>
+                <div className="fw-bold">
+                  <i className="far fa-eye me-1"></i>
+                  {formatWeeklyViews(spot.weekly_views)}
                 </div>
+                <div className="text-muted small">過去7日</div>
               </div>
             </div>
-          </article>
-        </li>
+          </div>
+        </div>
       ))}
-    </ol>
+    </div>
   );
 }

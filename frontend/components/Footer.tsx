@@ -1,9 +1,18 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-white">
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-sm text-slate-500 sm:flex-row sm:px-6 lg:px-8">
-        <span>© {new Date().getFullYear()} 旅ログマップ</span>
-        <span>Next.js + Tailwind CSS フロントエンド</span>
+    <footer className="py-4 mt-auto" style={{ backgroundColor: 'var(--footer-deep)', color: '#fff' }}>
+      <div className="container mx-auto text-center px-4">
+        <p className="mb-1">&copy; 旅ログマップ</p>
+        <p className="mb-0">
+          <a 
+            href="https://maps-planner.vercel.app/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-white underline hover:text-gray-200"
+          >
+            maps-planner.vercel.app
+          </a>
+        </p>
       </div>
     </footer>
   );

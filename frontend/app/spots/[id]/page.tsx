@@ -18,26 +18,24 @@ export default async function SpotDetailPage({ params }: SpotDetailPageProps) {
   const { spot, viewer } = data;
 
   return (
-    <div className="space-y-8">
+    <>
       <ViewTracker spotId={spotId} enabled={viewer.is_authenticated} />
-      <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-6">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-100">
-              {spot.image ? (
-                <Image src={spot.image} alt={spot.title} fill className="object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-slate-400">画像なし</div>
-              )}
-            </div>
-            <div className="space-y-4 p-6">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold text-slate-900">{spot.title}</h1>
-                  <p className="text-sm text-slate-500">投稿者: {spot.created_by_detail?.username ?? '不明'}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <ShareButton url={data.share_url} />
+      <div className="row">
+        <div className="col-md-8">
+          <div className="card">
+            {spot.image && (
+              <img
+                src={spot.image}
+                className="card-img-top spot-hero"
+                alt={spot.title}
+                style={{ height: '400px', objectFit: 'cover' }}
+              />
+            )}
+
+            <div className="card-body">
+              <h1 className="card-title">{spot.title}</h1>
+              <div className="mb-3">
+                <div className="d-flex flex-wrap gap-2">
                   {viewer.is_authenticated ? (
                     <FavoriteButton
                       spotId={spotId}
@@ -45,74 +43,131 @@ export default async function SpotDetailPage({ params }: SpotDetailPageProps) {
                       disabled={!viewer.is_authenticated}
                     />
                   ) : (
-                    <Link
-                      href="/login"
-                      className="rounded-full border border-slate-300 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-100"
-                    >
-                      ログインしてお気に入り
+                    <Link href="/login" className="btn btn-outline-danger btn-sm">
+                      <i className="fas fa-heart me-1"></i>お気に入りに追加（ログイン）
                     </Link>
                   )}
+                  <ShareButton url={data.share_url} />
                 </div>
               </div>
-              <p className="whitespace-pre-wrap text-sm text-slate-700">{spot.description}</p>
-              {spot.tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                  {spot.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-slate-100 px-2 py-1">
+
+              <div className="mb-3">
+                <small className="text-muted">
+                  <i className="fas fa-user me-1"></i>投稿者: {spot.created_by_detail?.username ?? '不明'}
+                  <span className="ms-3">
+                    <i className="fas fa-calendar me-1"></i>
+                    {spot.created_at ? new Date(spot.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : '不明'}
+                  </span>
+                </small>
+              </div>
+
+              {spot.address && (
+                <p className="mb-3">
+                  <i className="fas fa-map-marker-alt me-2"></i>
+                  {spot.address}
+                </p>
+              )}
+
+              <p className="card-text" style={{ whiteSpace: 'pre-wrap' }}>
+                {spot.description}
+              </p>
+
+              <div className="mb-3">
+                <small className="text-muted">
+                  緯度: {spot.latitude.toFixed(4)}, 経度: {spot.longitude.toFixed(4)}
+                </small>
+              </div>
+
+              {spot.tags.length > 0 && (
+                <div className="mb-2">
+                  {spot.tags.map((tag: string) => (
+                    <span key={tag} className="badge bg-secondary me-1">
                       #{tag}
                     </span>
                   ))}
                 </div>
-              ) : null}
-              <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                {spot.address ? <div>住所: {spot.address}</div> : null}
-                <div>
-                  座標: {spot.latitude.toFixed(4)}, {spot.longitude.toFixed(4)}
-                </div>
-              </div>
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <iframe
-                  title="map"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${spot.longitude - 0.01}%2C${spot.latitude - 0.01}%2C${spot.longitude + 0.01}%2C${spot.latitude + 0.01}&layer=mapnik&marker=${spot.latitude}%2C${spot.longitude}`}
-                  className="h-64 w-full"
-                  loading="lazy"
-                />
-              </div>
+              )}
             </div>
           </div>
-          <ReviewForm spotId={spotId} canReview={viewer.is_authenticated && viewer.can_review} />
-          <ReviewList reviews={data.reviews} avgRating={data.avg_rating} />
+
+          {/* レビューセクション */}
+          <div className="card mt-4">
+            <div className="card-header">
+              <h3>
+                <i className="fas fa-star me-2"></i>レビュー
+              </h3>
+              {data.avg_rating && (
+                <div className="rating">
+                  平均評価:{' '}
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <i key={i} className={i < Math.round(data.avg_rating!) ? 'fas fa-star' : 'far fa-star'}></i>
+                  ))}
+                  ({data.reviews.length}件)
+                </div>
+              )}
+            </div>
+            <div className="card-body">
+              <ReviewForm spotId={spotId} canReview={viewer.is_authenticated && viewer.can_review} />
+              <ReviewList reviews={data.reviews} avgRating={data.avg_rating} />
+            </div>
+          </div>
         </div>
-        <aside className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">関連スポット</h2>
-            {data.related_spots.length === 0 ? (
-              <p className="text-sm text-slate-500">関連スポットはありません。</p>
-            ) : (
-              <div className="space-y-4">
-                {data.related_spots.map((related) => (
-                  <Link
-                    key={related.id}
-                    href={`/spots/${related.id}`}
-                    className="block rounded-2xl border border-slate-100 p-3 transition hover:bg-slate-50"
-                  >
-                    <p className="font-semibold text-slate-900">{related.title}</p>
-                    <p className="text-xs text-slate-500">{related.address}</p>
-                  </Link>
+
+        <div className="col-md-4">
+          {/* 地図表示エリア */}
+          <div className="card">
+            <div className="card-header">
+              <h5>
+                <i className="fas fa-map me-2"></i>位置情報
+              </h5>
+            </div>
+            <div className="card-body p-0">
+              <iframe
+                title="map"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${spot.longitude - 0.01}%2C${spot.latitude - 0.01}%2C${spot.longitude + 0.01}%2C${spot.latitude + 0.01}&layer=mapnik&marker=${spot.latitude}%2C${spot.longitude}`}
+                style={{ height: '300px', width: '100%', border: 'none' }}
+                loading="lazy"
+              />
+            </div>
+            <div className="card-footer">
+              <small className="text-muted">
+                緯度: {spot.latitude.toFixed(4)}, 経度: {spot.longitude.toFixed(4)}
+              </small>
+            </div>
+          </div>
+
+          {/* 関連スポット */}
+          {data.related_spots.length > 0 && (
+            <div className="card mt-4">
+              <div className="card-header">
+                <h5>
+                  <i className="fas fa-user me-2"></i>
+                  {spot.created_by_detail?.username ?? '投稿者'}さんの他の投稿
+                </h5>
+              </div>
+              <div className="card-body">
+                {data.related_spots.map((related: any) => (
+                  <div key={related.id} className="mb-2">
+                    <Link href={`/spots/${related.id}`} className="text-decoration-none">
+                      {related.title}
+                    </Link>
+                    <br />
+                    <small className="text-muted">
+                      {related.created_at ? new Date(related.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}
+                    </small>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">スポット情報</h2>
-            <ul className="space-y-2 text-sm text-slate-600">
-              <li>投稿日時: {spot.created_at ? new Date(spot.created_at).toLocaleString('ja-JP') : '不明'}</li>
-              <li>更新日時: {spot.updated_at ? new Date(spot.updated_at).toLocaleString('ja-JP') : '不明'}</li>
-              <li>AI生成: {spot.is_ai_generated ? 'はい' : 'いいえ'}</li>
-            </ul>
-          </div>
-        </aside>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <div className="mt-4">
+        <Link href="/" className="btn btn-secondary">
+          <i className="fas fa-arrow-left me-2"></i>一覧に戻る
+        </Link>
+      </div>
+    </>
   );
 }

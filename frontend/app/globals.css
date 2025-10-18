@@ -1,19 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --brand-teal: #568F87;
+  --brand-teal-dark: #064232;
+  --footer-deep: #064232;
+  --light-gray: #FFF5F2;
+  --accent-pink: #F5BABB;
+  --page-cream: #FFF5F2;
+  --panel-gray: #d9d9d9;
   color-scheme: light;
 }
 
+html, body {
+  font-family: 'Mochiy Pop P One', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Noto Sans JP', sans-serif;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-[#FFF5F2] text-slate-900;
+}
+
+h1, h2, h3, h4, h5, h6 { 
+  letter-spacing: 0.3px; 
+}
+
+p, small, label, input, textarea, button, a, li { 
+  letter-spacing: 0.2px; 
 }
 
 a {
-  @apply text-primary hover:text-blue-500;
+  @apply text-primary hover:text-primary-dark;
 }
 
 button:disabled {
   @apply opacity-60 cursor-not-allowed;
 }
+
+/* Card transitions */
+.card-hover {
+  transition: transform 0.2s;
+}
+.card-hover:hover {
+  transform: translateY(-5px);
+}
+
+/* Button styles aligned with Django */
+.btn-detail {
+  background: var(--accent-pink);
+  color: var(--brand-teal-dark);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.4rem 1rem;
+  font-size: 0.95rem;
+  transition: filter 0.2s;
+}
+.btn-detail:hover {
+  filter: brightness(0.95);
+}
+
+.btn-primary-custom {
+  background: var(--brand-teal);
+  color: #ffffff;
+  border: none;
+  transition: background 0.2s;
+}
+.btn-primary-custom:hover {
+  background: var(--brand-teal-dark);
+}
+

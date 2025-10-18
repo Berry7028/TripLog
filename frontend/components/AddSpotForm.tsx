@@ -24,7 +24,9 @@ export default function AddSpotForm(_: AddSpotFormProps) {
 
     if (!response.ok) {
       const detail = await response.json();
-      const errorMessage = detail.error || Object.values(detail.errors || {})[0]?.[0];
+      const errors = detail.errors as Record<string, string[]> | undefined;
+      const firstError = errors ? Object.values(errors)[0]?.[0] : null;
+      const errorMessage = detail.error || firstError;
       setError(errorMessage || 'スポットを投稿できませんでした。');
     } else {
       const json = await response.json();

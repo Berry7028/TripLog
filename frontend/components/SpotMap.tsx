@@ -55,10 +55,7 @@ export default function SpotMap({ spots, filter, onSelect, selectedSpotId }: Spo
   return (
     <div className="relative h-[600px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <MapContainer
-        center={activeCenter}
-        zoom={6}
-        scrollWheelZoom
-        className="h-full w-full"
+        {...({ center: activeCenter, zoom: 6, scrollWheelZoom: true, className: 'h-full w-full' } as any)}
       >
         <MapAutoCenter center={activeCenter} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

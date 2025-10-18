@@ -24,9 +24,10 @@ export default function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isPending}
-      className="rounded-full border border-slate-200 px-3 py-1 text-slate-700 transition hover:bg-slate-100"
+      className="text-white hover:text-gray-200 transition"
+      title="ログアウト"
     >
-      ログアウト
+      <i className="fa-solid fa-right-from-bracket" style={{ color: '#F5BABB' }}></i>
     </button>
   );
 }

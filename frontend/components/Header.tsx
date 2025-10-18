@@ -14,14 +14,15 @@ interface HeaderProps {
 }
 
 const navItems = [
-  { href: '/', label: 'ホーム' },
-  { href: '/ranking', label: 'ランキング' },
-  { href: '/map', label: 'マップ' },
-  { href: '/plan', label: 'プラン' },
+  { href: '/map', label: 'まっぷ' },
+  { href: '/ranking', label: 'らんきんぐ' },
+  { href: '/spots/add', label: 'とうこう' },
+  { href: '/plan', label: 'ぷらん' },
 ];
 
 export default function Header({ currentUser: initialUser }: HeaderProps) {
   const [currentUser, setCurrentUser] = useState(initialUser);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (initialUser === undefined) {
@@ -39,56 +40,100 @@ export default function Header({ currentUser: initialUser }: HeaderProps) {
     }
   }, [initialUser]);
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      window.location.href = `/?search=${encodeURIComponent(searchQuery)}`;
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    window.location.href = '/';
+  };
+
   return (
-    <header className="border-b border-slate-200 bg-white shadow-sm">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/" className="text-xl font-semibold text-slate-900">
-          旅ログマップ
-        </Link>
-        <nav className="hidden items-center gap-4 text-sm font-medium text-slate-700 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full px-3 py-2 transition hover:bg-slate-100"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-3 text-sm">
-          {currentUser ? (
-            <>
-              <span className="hidden text-slate-600 sm:inline">{currentUser.username} さん</span>
+    <nav className="shadow-sm" style={{ backgroundColor: 'var(--brand-teal)' }}>
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between py-3">
+          <Link href="/" className="text-xl font-bold text-white">
+            <i className="fas fa-map-marked-alt me-2"></i>旅ログまっぷ
+          </Link>
+
+          <div className="hidden items-center gap-4 md:flex">
+            {navItems.map((item) => (
               <Link
-                href="/my-spots"
-                className="rounded-full border border-primary px-3 py-1 text-primary transition hover:bg-primary hover:text-white"
+                key={item.href}
+                href={item.href}
+                className="text-white transition hover:text-gray-100"
               >
-                マイスポット
+                {item.label}
               </Link>
-              <Link
-                href="/spots/add"
-                className="hidden rounded-full bg-primary px-3 py-1 text-white transition hover:bg-blue-600 sm:inline"
-              >
-                投稿する
-              </Link>
-              <LogoutButton />
-            </>
-          ) : (
-            <>
-              <Link href="/spots/add" className="rounded-full bg-primary px-3 py-1 text-white transition hover:bg-blue-600">
-                投稿する
-              </Link>
-              <Link href="/login" className="rounded-full border border-slate-200 px-3 py-1 text-slate-700 transition hover:bg-slate-100">
-                ログイン
-              </Link>
-              <Link href="/register" className="rounded-full border border-slate-200 px-3 py-1 text-slate-700 transition hover:bg-slate-100">
-                新規登録
-              </Link>
-            </>
-          )}
+            ))}
+          </div>
+
+          <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center me-3">
+            <div className="relative flex items-center">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="検索"
+                className="rounded-pill border-0 px-4 py-1 pr-10 text-sm focus:outline-none"
+                style={{ minWidth: '200px' }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="flex items-center gap-3">
+            {currentUser ? (
+              <>
+                <Link
+                  href="/my-spots"
+                  className="flex items-center justify-center rounded-full text-white"
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.13)',
+                  }}
+                >
+                  <i className="fas fa-user"></i>
+                </Link>
+                <Link href="/profile" className="text-white hover:text-gray-100 hidden md:inline">
+                  {currentUser.username}
+                </Link>
+                <LogoutButton />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-white hover:text-gray-100 flex items-center gap-1"
+                >
+                  <i className="fas fa-sign-in-alt"></i>
+                  <span className="hidden md:inline">ログイン</span>
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-white hover:text-gray-100 flex items-center gap-1"
+                >
+                  <i className="fas fa-user-plus"></i>
+                  <span className="hidden md:inline">新規登録</span>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </header>
+    </nav>
   );
 }

@@ -10,8 +10,8 @@ interface SpotCardProps {
 
 export default function SpotCard({ spot, showRecommendBadge }: SpotCardProps) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+    <div className="card-hover flex h-full flex-col overflow-hidden bg-gray-100 shadow-md" style={{ borderRadius: '22px', border: 'none' }}>
+      <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ height: '200px', backgroundColor: 'var(--light-gray)' }}>
         {spot.image ? (
           <Image
             src={spot.image}
@@ -21,45 +21,44 @@ export default function SpotCard({ spot, showRecommendBadge }: SpotCardProps) {
             sizes="(max-width:768px) 100vw, 33vw"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-slate-400">
-            <span className="text-sm">No Image</span>
+          <div className="flex h-full w-full items-center justify-center text-gray-400">
+            <i className="fas fa-image fa-3x"></i>
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">{spot.title}</h3>
-          {showRecommendBadge && spot.is_recommended ? (
-            <span className="rounded-full bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800">AIおすすめ</span>
-          ) : null}
-        </div>
-        <p className="text-sm text-slate-600">
-          {spot.description.length > 120
-            ? `${spot.description.slice(0, 120)}…`
+      <div className="flex flex-1 flex-col gap-2 p-4" style={{ backgroundColor: 'var(--light-gray)' }}>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">{spot.title}</h3>
+        {showRecommendBadge && spot.is_recommended ? (
+          <span className="self-start mb-2 rounded-sm bg-yellow-400 px-2 py-1 text-xs font-semibold text-gray-900">AIおすすめ</span>
+        ) : null}
+        <p className="text-sm text-gray-800 mb-2 leading-relaxed">
+          {spot.description.length > 70
+            ? `${spot.description.slice(0, 70)}…`
             : spot.description}
         </p>
         {spot.tags.length > 0 ? (
-          <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+          <div className="mb-2 flex flex-wrap gap-1">
             {spot.tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-slate-100 px-2 py-1">
+              <span key={tag} className="rounded-sm bg-white border border-gray-300 px-2 py-1 text-xs text-gray-700">
                 #{tag}
               </span>
             ))}
           </div>
         ) : null}
-        <div className="mt-auto flex items-center justify-between text-xs text-slate-500">
+        <div className="mt-auto flex items-center justify-between text-xs">
           {spot.address ? (
-            <span className="truncate" title={spot.address}>
+            <small className="text-gray-600 truncate">
+              <i className="fas fa-map-marker-alt me-1"></i>
               {spot.address}
-            </span>
+            </small>
           ) : (
-            <span>投稿者: {spot.created_by}</span>
+            <small className="text-gray-600">投稿者: {spot.created_by}</small>
           )}
           <Link
             href={`/spots/${spot.id}`}
-            className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-600"
+            className="btn-detail inline-block"
           >
-            詳細へ
+            詳細
           </Link>
         </div>
       </div>

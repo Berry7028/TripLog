@@ -49,7 +49,7 @@ export default function SpotMapLayout({ initialSpots, recentSpots, isAuthenticat
     setIsLoading(true);
     setError(null);
 
-    fetchSpotsByFilter(filter)
+    fetchSpotsByFilter({ filter })
       .then((response) => {
         if (!cancelled) {
           setSpots(response.spots);
@@ -99,25 +99,29 @@ export default function SpotMapLayout({ initialSpots, recentSpots, isAuthenticat
   const sidebarSelectedSpot = useMemo(() => selectedSpot, [selectedSpot]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div>
-        <SpotMap
-          spots={spots}
+    <div className="row mt-2 mb-3">
+      <div className="col-md-8">
+        <div className="map-surface" style={{ height: '80vh', minHeight: '600px' }}>
+          <SpotMap
+            spots={spots}
+            filter={filter}
+            onSelect={setSelectedSpot}
+            selectedSpotId={selectedSpot?.id ?? null}
+          />
+        </div>
+      </div>
+      <div className="col-md-4">
+        <SpotMapSidebar
+          selectedSpot={sidebarSelectedSpot}
           filter={filter}
-          onSelect={setSelectedSpot}
-          selectedSpotId={selectedSpot?.id ?? null}
+          onFilterChange={handleFilterChange}
+          isAuthenticated={isAuthenticated}
+          recentSpots={recentSpots}
+          onSelectRecentSpot={handleSelectRecentSpot}
+          isLoading={isLoading}
+          error={error}
         />
       </div>
-      <SpotMapSidebar
-        selectedSpot={sidebarSelectedSpot}
-        filter={filter}
-        onFilterChange={handleFilterChange}
-        isAuthenticated={isAuthenticated}
-        recentSpots={recentSpots}
-        onSelectRecentSpot={handleSelectRecentSpot}
-        isLoading={isLoading}
-        error={error}
-      />
     </div>
   );
 }

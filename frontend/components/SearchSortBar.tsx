@@ -34,47 +34,43 @@ export default function SearchSortBar({ searchQuery, sortMode, totalCount, recom
     router.refresh();
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    updateQuery({ search: keyword || undefined });
-  };
-
   const handleSortChange = (value: 'recent' | 'relevance') => {
     updateQuery({ sort: value });
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
-      <form onSubmit={handleSubmit} className="flex w-full max-w-xl items-center gap-3">
-        <input
-          type="text"
-          placeholder="スポットを検索"
-          value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
-          className="flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
-        />
-        <button type="submit" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white">
-          検索
-        </button>
-        <div className="flex items-center gap-2 text-sm">
-          <label htmlFor="sortMode" className="font-semibold text-slate-600">
+    <div className="space-y-3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div className="flex items-center gap-3">
+          <label htmlFor="sortMode" className="font-bold text-base whitespace-nowrap" style={{ color: '#333' }}>
             並び順
           </label>
           <select
             id="sortMode"
             value={sortMode}
             onChange={(event) => handleSortChange(event.target.value as 'recent' | 'relevance')}
-            className="rounded-full border border-slate-300 px-3 py-1 text-sm"
+            className="form-select border border-gray-400 px-4 py-1.5 text-base transition-colors focus:border-[#6B9080] focus:outline-none"
+            style={{ borderRadius: '8px', minWidth: '120px', backgroundColor: '#fff' }}
           >
             <option value="recent">新着順</option>
             <option value="relevance">おすすめ順(β)</option>
           </select>
         </div>
-      </form>
-      <div className="flex flex-col gap-1 text-xs text-slate-500 md:text-right">
-        <span>検索結果: {totalCount}件</span>
-        {recommendationNotice ? <span className="text-amber-600">{recommendationNotice}</span> : null}
+
+        {recommendationNotice && (
+          <div className="alert alert-info mb-0 py-2 px-3 text-sm rounded-lg bg-blue-100 text-blue-800">
+            <i className="fas fa-info-circle me-1"></i>
+            {recommendationNotice}
+          </div>
+        )}
       </div>
+
+      {searchQuery && (
+        <div className="alert alert-info rounded-lg bg-blue-100 text-blue-800 p-3">
+          <i className="fas fa-search me-2"></i>
+          「{searchQuery}」の検索結果: {totalCount}件
+        </div>
+      )}
     </div>
   );
 }

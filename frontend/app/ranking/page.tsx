@@ -5,11 +5,16 @@ export default async function RankingPage() {
   const ranking = await fetchRanking();
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900">直近7日間の人気スポット</h1>
-        <p className="text-sm text-slate-500">集計期間開始: {new Date(ranking.week_ago).toLocaleString('ja-JP')}</p>
-      </header>
+    <div>
+      <div className="d-flex align-items-center mb-3">
+        <h2 className="me-3">
+          <i className="fas fa-trophy text-warning me-2"></i>ランキング
+        </h2>
+        <span className="text-muted">直近7日間の閲覧数</span>
+        <div className="ms-auto small text-muted">
+          集計開始: {new Date(ranking.week_ago).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
       <RankingList spots={ranking.spots} />
     </div>
   );
