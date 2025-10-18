@@ -179,16 +179,14 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.manusvm.computer',
 ]
 
-# OpenRouter (AI レコメンド) 設定
-OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
-OPENROUTER_RECOMMENDATION_MODEL = os.environ.get('OPENROUTER_RECOMMENDATION_MODEL', 'openai/gpt-4o-mini')
-OPENROUTER_RECOMMENDATION_URL = os.environ.get(
-    'OPENROUTER_RECOMMENDATION_URL',
-    'https://openrouter.ai/api/v1/chat/completions',
+# OpenAI (AI レコメンド) 設定
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+OPENAI_RECOMMENDATION_MODEL = os.environ.get('OPENAI_RECOMMENDATION_MODEL', 'gpt-4o-mini')
+OPENAI_RECOMMENDATION_URL = os.environ.get(
+    'OPENAI_RECOMMENDATION_URL',
+    'https://api.openai.com/v1/chat/completions',
 )
-OPENROUTER_TIMEOUT = _env_int('OPENROUTER_TIMEOUT', 15)
-OPENROUTER_SITE_URL = os.environ.get('OPENROUTER_SITE_URL', 'https://triplog.example.com')
-OPENROUTER_APP_NAME = os.environ.get('OPENROUTER_APP_NAME', 'TripLog Recommendations')
+OPENAI_TIMEOUT = _env_int('OPENAI_TIMEOUT', 15)
 
 # iframe 埋め込みを許可（VS Code Simple Browser 対応）
 X_FRAME_OPTIONS = 'ALLOWALL'
