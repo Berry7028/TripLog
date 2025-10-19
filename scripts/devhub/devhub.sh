@@ -21,6 +21,15 @@ print_error() {
     echo -e "\033[31m❌ $1\033[0m"
 }
 
+cleanup_fullstack() {
+    if [ -n "$FULLSTACK_BACKEND_PID" ] && kill -0 "$FULLSTACK_BACKEND_PID" 2>/dev/null; then
+        kill "$FULLSTACK_BACKEND_PID" 2>/dev/null || true
+    fi
+    if [ -n "$FULLSTACK_FRONTEND_PID" ] && kill -0 "$FULLSTACK_FRONTEND_PID" 2>/dev/null; then
+        kill "$FULLSTACK_FRONTEND_PID" 2>/dev/null || true
+    fi
+}
+
 print_header() {
     echo -e "\n\033[36m🚀 $1\033[0m"
 }
@@ -178,6 +187,61 @@ run_ai_generator() {
     bash "$SCRIPTS_DIR/ai_generate_spots.sh"
 }
 
+run_fullstack() {
+    print_header "Django と Next.js の開発サーバーを同時に起動します"
+
+    if ! python_cmd=$(resolve_python); then
+        print_error "Pythonが見つからないためDjangoサーバーを起動できません"
+        return 1
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+        print_error "npm が見つからないため Next.js サーバーを起動できません"
+        return 1
+    fi
+
+    if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
+        print_info "Next.js の依存関係をインストールしています..."
+        if ! npm --prefix "$ROOT_DIR/frontend" install; then
+            print_error "npm install に失敗しました"
+            return 1
+        fi
+    fi
+
+    print_info "Ctrl+C で両方のサーバーを停止します"
+
+    (
+        cd "$ROOT_DIR" && \
+        print_info "▶️  Django: http://127.0.0.1:8000/" && \
+        "$python_cmd" manage.py runserver
+    ) &
+    FULLSTACK_BACKEND_PID=$!
+
+    (
+        cd "$ROOT_DIR/frontend" && \
+        print_info "▶️  Next.js: http://127.0.0.1:3000/" && \
+        npm run dev
+    ) &
+    FULLSTACK_FRONTEND_PID=$!
+
+    trap 'print_info "停止シグナルを受信しました。サーバーを終了します..."; cleanup_fullstack' INT TERM
+
+    set +e
+    wait "$FULLSTACK_BACKEND_PID"
+    backend_status=$?
+    wait "$FULLSTACK_FRONTEND_PID"
+    frontend_status=$?
+    set -e
+
+    trap - INT TERM
+    cleanup_fullstack
+
+    if [ $backend_status -ne 0 ]; then
+        return $backend_status
+    fi
+    return $frontend_status
+}
+
 run_flow_generator() {
     local base_url
     read -r -p "ベースURLを入力してください (デフォルト: http://127.0.0.1:8000/): " base_url
@@ -267,6 +331,7 @@ show_menu() {
   7) requirements.txt インストール (pip install -r requirements.txt)
   8) マイグレーション実行 (makemigrations && migrate)
   9) AI閲覧分析バッチ実行 (run_recommendation_jobs.sh)
+ 10) Django + Next.js 同時起動
   0) 終了
 MENU
         read -r -p "番号を入力 > " choice
@@ -299,12 +364,15 @@ MENU
             9)
                 run_recommendation_job
                 ;;
+            10)
+                run_fullstack
+                ;;
             0)
                 print_info "終了します"
                 break
                 ;;
             *)
-                print_warning "0〜8の番号を入力してください"
+                print_warning "0〜10の番号を入力してください"
                 ;;
         esac
     done
@@ -325,6 +393,7 @@ command:
   install_requirements requirements.txt をインストール
   migrate     makemigrations && migrate を実行
   recommend [ARGS] run_recommendation_jobs.sh を実行
+  fullstack   Django と Next.js の開発サーバーを同時に起動
   help        このメッセージを表示
 USAGE
 }
@@ -366,6 +435,9 @@ run_cli() {
             ;;
         recommend)
             bash "$SCRIPTS_DIR/run_recommendation_jobs.sh" "$@"
+            ;;
+        fullstack)
+            run_fullstack
             ;;
         help|--help|-h)
             usage
