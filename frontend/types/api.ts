@@ -125,6 +125,7 @@ export interface AuthStatusResponse {
     email: string;
     date_joined?: string | null;
     profile: ProfileResponse['profile'];
+    is_staff?: boolean;
   };
   stats?: ProfileStats;
   recent_activity?: ProfileRecentActivity;

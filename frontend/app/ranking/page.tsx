@@ -7,7 +7,7 @@ export default async function RankingPage() {
   return (
     <div>
       <div className="d-flex align-items-center mb-3">
-        <h2 className="me-3">
+        <h2 className="section-title d-flex align-items-center mb-0 me-3">
           <i className="fas fa-trophy text-warning me-2"></i>ランキング
         </h2>
         <span className="text-muted">直近7日間の閲覧数</span>

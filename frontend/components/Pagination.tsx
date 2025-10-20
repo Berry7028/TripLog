@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { Fragment } from 'react';
 
 import type { PaginationMeta } from '@/types/api';
 
@@ -30,30 +29,18 @@ export default function Pagination({ pagination, basePath = '/', searchParams }:
   ];
 
   return (
-    <nav className="mt-8 flex justify-center" aria-label="ページネーション">
-      <ul className="flex flex-wrap items-center gap-2">
+    <nav className="mt-4" aria-label="ページネーション">
+      <ul className="pagination justify-content-center flex-wrap gap-2">
         {items.map((item) => (
-          <li key={item.label}>
+          <li
+            key={item.label}
+            className={`page-item${item.disabled ? ' disabled' : ''}${item.active ? ' active' : ''}`}
+            aria-current={item.active ? 'page' : undefined}
+          >
             {item.disabled ? (
-              <span 
-                className={`inline-block px-3 py-2 rounded-pill text-sm ${
-                  item.active 
-                    ? 'text-white' 
-                    : 'text-gray-400 border border-gray-300'
-                }`}
-                style={item.active ? { 
-                  backgroundColor: 'var(--brand-teal)', 
-                  borderColor: 'var(--brand-teal)' 
-                } : {}}
-              >
-                {item.label}
-              </span>
+              <span className="page-link">{item.label}</span>
             ) : (
-              <Link
-                href={createHref(item.page)}
-                className="inline-block px-3 py-2 rounded-pill text-sm border border-gray-300 transition hover:bg-gray-100"
-                style={{ color: 'var(--brand-teal-dark)' }}
-              >
+              <Link href={createHref(item.page)} className="page-link">
                 {item.label}
               </Link>
             )}

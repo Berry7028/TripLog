@@ -20,7 +20,7 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-4xl mb-4" style={{ color: 'var(--brand-teal)' }}>いちらん</h2>
+      <h2 className="section-title">いちらん</h2>
       <SearchSortBar
         searchQuery={data.search_query}
         sortMode={data.sort_mode}

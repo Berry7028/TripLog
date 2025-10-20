@@ -5,12 +5,16 @@ import Link from 'next/link';
 
 import LogoutButton from './LogoutButton';
 import { fetchAuthStatus } from '@/lib/client-api';
+import type { AuthStatusResponse } from '@/types/api';
+
+interface HeaderUser {
+  id: number;
+  username: string;
+  isStaff?: boolean;
+}
 
 interface HeaderProps {
-  currentUser?: {
-    id: number;
-    username: string;
-  } | null;
+  currentUser?: HeaderUser | null;
 }
 
 const navItems = [
@@ -21,117 +25,151 @@ const navItems = [
 ];
 
 export default function Header({ currentUser: initialUser }: HeaderProps) {
-  const [currentUser, setCurrentUser] = useState(initialUser);
+  const [currentUser, setCurrentUser] = useState<HeaderUser | null | undefined>(
+    initialUser,
+  );
+  const [isNavOpen, setIsNavOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortParam, setSortParam] = useState('');
 
   useEffect(() => {
-    if (initialUser === undefined) {
-      fetchAuthStatus()
-        .then((auth) => {
-          if (auth.is_authenticated && auth.user) {
-            setCurrentUser({ id: auth.user.id, username: auth.user.username });
-          } else {
-            setCurrentUser(null);
-          }
-        })
-        .catch(() => {
-          setCurrentUser(null);
-        });
+    if (typeof window === 'undefined') {
+      return;
     }
+    const params = new URLSearchParams(window.location.search);
+    setSearchQuery(params.get('search') ?? '');
+    setSortParam(params.get('sort') ?? '');
+  }, []);
+
+  useEffect(() => {
+    if (initialUser !== undefined) {
+      return;
+    }
+    fetchAuthStatus()
+      .then((auth: AuthStatusResponse) => {
+        if (auth.is_authenticated && auth.user) {
+          setCurrentUser({
+            id: auth.user.id,
+            username: auth.user.username,
+            isStaff: Boolean(auth.user.is_staff),
+          });
+        } else {
+          setCurrentUser(null);
+        }
+      })
+      .catch(() => {
+        setCurrentUser(null);
+      });
   }, [initialUser]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/?search=${encodeURIComponent(searchQuery)}`;
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const destination = new URL('/', window.location.origin);
+    const trimmed = searchQuery.trim();
+    if (trimmed) {
+      destination.searchParams.set('search', trimmed);
     }
+    if (sortParam) {
+      destination.searchParams.set('sort', sortParam);
+    }
+    window.location.href = destination.toString();
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
-    window.location.href = '/';
+    const destination = new URL('/', window.location.origin);
+    if (sortParam) {
+      destination.searchParams.set('sort', sortParam);
+    }
+    window.location.href = destination.toString();
   };
 
+  const closeNav = () => setIsNavOpen(false);
+
   return (
-    <nav className="shadow-sm" style={{ backgroundColor: 'var(--brand-teal)' }}>
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between py-3">
-          <Link href="/" className="text-xl font-bold text-white">
-            <i className="fas fa-map-marked-alt me-2"></i>旅ログまっぷ
-          </Link>
+    <nav className="navbar navbar-expand-lg navbar-dark navbar-custom shadow-sm">
+      <div className="container">
+        <Link href="/" className="navbar-brand" onClick={closeNav}>
+          <i className="fas fa-map-marked-alt me-2" aria-hidden="true"></i>
+          旅ログまっぷ
+        </Link>
 
-          <div className="hidden items-center gap-4 md:flex">
+        <button
+          type="button"
+          className="navbar-toggler"
+          aria-label="メニューを開く"
+          aria-expanded={isNavOpen}
+          onClick={() => setIsNavOpen((open) => !open)}
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        <div className={`collapse navbar-collapse${isNavOpen ? ' show' : ''}`}>
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-white transition hover:text-gray-100"
-              >
-                {item.label}
-              </Link>
+              <li className="nav-item" key={item.href}>
+                <Link href={item.href} className="nav-link" onClick={closeNav}>
+                  {item.label}
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
 
-          <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center me-3">
-            <div className="relative flex items-center">
+          <form className="d-flex me-lg-3 mb-3 mb-lg-0" onSubmit={handleSearchSubmit}>
+            <div className="input-group search-group w-100">
               <input
+                className="form-control search-input"
                 type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                name="search"
                 placeholder="検索"
-                className="rounded-pill border-0 px-4 py-1 pr-10 text-sm focus:outline-none"
-                style={{ minWidth: '200px' }}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                aria-label="スポット検索"
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className="absolute right-3 text-gray-500 hover:text-gray-700"
-                >
+              {sortParam ? <input type="hidden" name="sort" value={sortParam} /> : null}
+              {searchQuery ? (
+                <button type="button" className="btn btn-clear" onClick={handleClearSearch}>
                   ×
                 </button>
-              )}
+              ) : null}
             </div>
           </form>
 
-          <div className="flex items-center gap-3">
+          <ul className="navbar-nav mb-2 mb-lg-0">
             {currentUser ? (
-              <>
-                <Link
-                  href="/my-spots"
-                  className="flex items-center justify-center rounded-full text-white"
-                  style={{
-                    width: '34px',
-                    height: '34px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.13)',
-                  }}
-                >
-                  <i className="fas fa-user"></i>
+              <li className="nav-item d-flex align-items-center gap-2">
+                <Link href="/my-spots" className="avatar-circle" onClick={closeNav}>
+                  <span className="visually-hidden">マイスポット</span>
+                  <i className="fas fa-user" aria-hidden="true"></i>
                 </Link>
-                <Link href="/profile" className="text-white hover:text-gray-100 hidden md:inline">
+                <Link href="/profile" className="nav-link" onClick={closeNav}>
                   {currentUser.username}
                 </Link>
-                <LogoutButton />
-              </>
+                {currentUser.isStaff ? (
+                  <Link href="/manage/" className="nav-link" onClick={closeNav}>
+                    <i className="fas fa-cog me-1" aria-hidden="true"></i>
+                    管理
+                  </Link>
+                ) : null}
+                <LogoutButton className="nav-link d-flex align-items-center" />
+              </li>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className="text-white hover:text-gray-100 flex items-center gap-1"
-                >
-                  <i className="fas fa-sign-in-alt"></i>
-                  <span className="hidden md:inline">ログイン</span>
-                </Link>
-                <Link
-                  href="/register"
-                  className="text-white hover:text-gray-100 flex items-center gap-1"
-                >
-                  <i className="fas fa-user-plus"></i>
-                  <span className="hidden md:inline">新規登録</span>
-                </Link>
+                <li className="nav-item">
+                  <Link href="/login" className="nav-link" onClick={closeNav}>
+                    <i className="fas fa-sign-in-alt me-1" aria-hidden="true"></i>
+                    ログイン
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/register" className="nav-link" onClick={closeNav}>
+                    <i className="fas fa-user-plus me-1" aria-hidden="true"></i>
+                    新規登録
+                  </Link>
+                </li>
               </>
             )}
-          </div>
+          </ul>
         </div>
       </div>
     </nav>

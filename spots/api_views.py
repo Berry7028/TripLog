@@ -169,6 +169,7 @@ def auth_status(request):
                 "date_joined": request.user.date_joined.isoformat()
                 if request.user.date_joined
                 else None,
+                "is_staff": request.user.is_staff,
                 "profile": serialize_user_profile(profile),
             },
             "stats": {

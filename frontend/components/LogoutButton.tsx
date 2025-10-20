@@ -3,7 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
-export default function LogoutButton() {
+interface LogoutButtonProps {
+  className?: string;
+}
+
+export default function LogoutButton({ className }: LogoutButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -24,10 +28,11 @@ export default function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isPending}
-      className="text-white hover:text-gray-200 transition"
+      className={className ?? 'text-white hover:text-gray-200 transition'}
       title="ログアウト"
     >
       <i className="fa-solid fa-right-from-bracket" style={{ color: '#F5BABB' }}></i>
+      <span className="visually-hidden">ログアウト</span>
     </button>
   );
 }
