@@ -10,11 +10,21 @@ npm install
 npm run dev
 ```
 
-デフォルトでは `http://localhost:8000` の Django サーバーに接続します。必要に応じて `.env.local` に `NEXT_PUBLIC_DJANGO_BASE_URL` を設定してください。
+デフォルトでは `http://localhost:8000` の Django サーバーに接続します。デプロイ時は `.env.local` などの環境ファイルに API のベース URL を設定してください。
 
 ```bash
-NEXT_PUBLIC_DJANGO_BASE_URL=http://localhost:8000
+# 最低限この変数を指定すればフロントエンドとバックエンドを別ホストに配置できます
+NEXT_PUBLIC_DJANGO_BASE_URL=https://api.example.com
+
+# ほかにも以下の環境変数名を認識します（必要なものだけ設定してください）
+# NEXT_PUBLIC_API_BASE_URL=https://api.example.com
+# NEXT_PUBLIC_BACKEND_URL=https://api.example.com
+# API_BASE_URL=https://api.example.com
+# DJANGO_API_BASE_URL=https://api.example.com
+# BACKEND_URL=https://api.example.com
 ```
+
+`frontend/.env.example` にサンプル値も用意しています。必要な値をコピーして `.env.local`（開発）や本番の環境変数に適用してください。
 
 ## 主なページ
 

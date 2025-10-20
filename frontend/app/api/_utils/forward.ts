@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { API_BASE_URL } from '@/lib/config';
+import { buildApiUrl } from '@/lib/config';
 
 async function parseResponseBody(response: Response): Promise<any> {
   const contentType = response.headers.get('content-type') || '';
@@ -57,7 +57,8 @@ export async function forwardJson(request: NextRequest, path: string, init: Requ
 
   const { body: _ignoredBody, method: _ignoredMethod, headers: _ignoredHeaders, ...rest } = init;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const targetUrl = buildApiUrl(path);
+  const response = await fetch(targetUrl, {
     ...rest,
     method,
     headers,
@@ -86,7 +87,8 @@ export async function forwardFormData(request: NextRequest, path: string, formDa
     headers.set('Referer', referer);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const targetUrl = buildApiUrl(path);
+  const response = await fetch(targetUrl, {
     method: 'POST',
     headers,
     body: formData,

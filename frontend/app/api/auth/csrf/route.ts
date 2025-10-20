@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { API_BASE_URL } from '@/lib/config';
+import { buildApiUrl } from '@/lib/config';
 
 import { copySetCookie } from '../../_utils/forward';
 
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     headers.set('Cookie', cookieHeader);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/profile/`, {
+  const response = await fetch(buildApiUrl('/api/profile/'), {
     method: 'GET',
     headers,
     redirect: 'manual',
