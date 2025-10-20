@@ -13,7 +13,7 @@ from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, csrf_protect, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .forms import ReviewForm, SpotForm, UserProfileForm
@@ -269,7 +269,8 @@ def register_api(request):
     )
 
 
-@csrf_exempt
+@ensure_csrf_cookie
+@csrf_protect
 @require_http_methods(["GET", "POST"])
 def profile_api(request):
     """プロフィール情報の取得・更新。"""
