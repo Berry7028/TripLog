@@ -18,7 +18,7 @@ async function parseResponseBody(response: Response): Promise<any> {
   return { raw: text };
 }
 
-function copySetCookie(from: Response, to: NextResponse) {
+export function copySetCookie(from: Response, to: NextResponse) {
   const responseHeaders = from.headers as unknown as { getSetCookie?: () => string[] };
   const cookies = responseHeaders.getSetCookie?.() || [];
   if (cookies.length === 0) {
@@ -68,6 +68,14 @@ export async function forwardFormData(request: NextRequest, path: string, formDa
   const headers = new Headers();
   if (cookieHeader) {
     headers.set('Cookie', cookieHeader);
+  }
+  const csrfHeader = request.headers.get('x-csrftoken');
+  if (csrfHeader) {
+    headers.set('X-CSRFToken', csrfHeader);
+  }
+  const referer = request.headers.get('referer');
+  if (referer) {
+    headers.set('Referer', referer);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {

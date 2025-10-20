@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 
 import type { ProfileResponse } from '@/types/api';
 
@@ -19,6 +19,41 @@ export default function ProfileForm({ profile, user }: ProfileFormProps) {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getCookie = (name: string): string | null => {
+      if (typeof document === 'undefined') {
+        return null;
+      }
+
+      const pairs = document.cookie ? document.cookie.split(';') : [];
+      for (const pair of pairs) {
+        const [rawKey, ...rawValue] = pair.trim().split('=');
+        if (rawKey === name) {
+          return decodeURIComponent(rawValue.join('='));
+        }
+      }
+      return null;
+    };
+
+    const token = getCookie('csrftoken');
+    if (token) {
+      setCsrfToken(token);
+      return;
+    }
+
+    fetch('/api/auth/csrf', { credentials: 'include' })
+      .then(() => {
+        const refreshedToken = getCookie('csrftoken');
+        if (refreshedToken) {
+          setCsrfToken(refreshedToken);
+        }
+      })
+      .catch(() => {
+        // noop: エラー時はフォーム送信時にエラーメッセージを表示する
+      });
+  }, []);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -30,6 +65,10 @@ export default function ProfileForm({ profile, user }: ProfileFormProps) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!csrfToken) {
+      setError('セキュリティトークンを取得できませんでした。ページを再読み込みしてください。');
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
 
@@ -38,10 +77,14 @@ export default function ProfileForm({ profile, user }: ProfileFormProps) {
     if (avatarFile) {
       formData.set('avatar', avatarFile);
     }
+    formData.set('csrfmiddlewaretoken', csrfToken);
 
     const response = await fetch('/api/profile/update', {
       method: 'POST',
       body: formData,
+      headers: {
+        'X-CSRFToken': csrfToken,
+      },
     });
 
     if (!response.ok) {
