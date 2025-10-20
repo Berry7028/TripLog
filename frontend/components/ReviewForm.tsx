@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 
+import { ensureCsrfToken } from '@/lib/csrf';
+
 interface ReviewFormProps {
   spotId: number;
   canReview: boolean;
@@ -24,10 +26,17 @@ export default function ReviewForm({ spotId, canReview }: ReviewFormProps) {
     setIsSubmitting(true);
     setError(null);
     try {
+      const token = await ensureCsrfToken();
+      if (!token) {
+        setError('セキュリティトークンを取得できませんでした。ページを再読み込みしてください。');
+        return;
+      }
+
       const response = await fetch(`/api/spots/${spotId}/review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRFToken': token,
         },
         body: JSON.stringify({ rating, comment }),
       });

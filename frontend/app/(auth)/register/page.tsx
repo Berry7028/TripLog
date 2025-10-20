@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 
+import { ensureCsrfToken } from '@/lib/csrf';
+
 export default function RegisterPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -21,9 +23,19 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     setError(null);
 
+    const token = await ensureCsrfToken();
+    if (!token) {
+      setError('セキュリティトークンを取得できませんでした。ページを再読み込みしてください。');
+      setIsSubmitting(false);
+      return;
+    }
+
     const response = await fetch('/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': token,
+      },
       body: JSON.stringify({ username, password1, password2 }),
     });
 

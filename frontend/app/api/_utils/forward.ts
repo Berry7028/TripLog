@@ -40,6 +40,14 @@ export async function forwardJson(request: NextRequest, path: string, init: Requ
   if (cookieHeader) {
     headers.set('Cookie', cookieHeader);
   }
+  const csrfHeader = request.headers.get('x-csrftoken');
+  if (csrfHeader) {
+    headers.set('X-CSRFToken', csrfHeader);
+  }
+  const referer = request.headers.get('referer');
+  if (referer) {
+    headers.set('Referer', referer);
+  }
 
   const rawBody = await request.text();
 

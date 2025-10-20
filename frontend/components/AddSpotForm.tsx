@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 
+import { ensureCsrfToken } from '@/lib/csrf';
+
 interface AddSpotFormProps {}
 
 export default function AddSpotForm(_: AddSpotFormProps) {
@@ -17,9 +19,20 @@ export default function AddSpotForm(_: AddSpotFormProps) {
     const form = event.currentTarget;
     const formData = new FormData(form);
 
+    const token = await ensureCsrfToken();
+    if (!token) {
+      setError('セキュリティトークンを取得できませんでした。ページを再読み込みしてください。');
+      setIsSubmitting(false);
+      return;
+    }
+    formData.set('csrfmiddlewaretoken', token);
+
     const response = await fetch('/api/spots/add', {
       method: 'POST',
       body: formData,
+      headers: {
+        'X-CSRFToken': token,
+      },
     });
 
     if (!response.ok) {

@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
+import { ensureCsrfToken } from '@/lib/csrf';
+
 interface LogoutButtonProps {
   className?: string;
 }
@@ -13,8 +15,17 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
 
   const handleLogout = () => {
     startTransition(async () => {
+      const token = await ensureCsrfToken();
+      if (!token) {
+        console.error('CSRF token is unavailable; cannot log out securely.');
+        return;
+      }
+
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: {
+          'X-CSRFToken': token,
+        },
       });
       if (response.ok) {
         router.push('/');

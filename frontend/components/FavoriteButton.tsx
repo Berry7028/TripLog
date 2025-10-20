@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
+import { ensureCsrfToken } from '@/lib/csrf';
+
 interface FavoriteButtonProps {
   spotId: number;
   initialFavorite: boolean;
@@ -16,8 +18,17 @@ export default function FavoriteButton({ spotId, initialFavorite, disabled }: Fa
 
   const toggleFavorite = () => {
     startTransition(async () => {
+      const token = await ensureCsrfToken();
+      if (!token) {
+        console.error('CSRF token is unavailable; cannot update favorites.');
+        return;
+      }
+
       const response = await fetch(`/api/spots/${spotId}/favorite`, {
         method: 'POST',
+        headers: {
+          'X-CSRFToken': token,
+        },
       });
       if (response.ok) {
         const json = await response.json();

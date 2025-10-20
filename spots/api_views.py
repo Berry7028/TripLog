@@ -13,7 +13,7 @@ from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt, csrf_protect, ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .forms import ReviewForm, SpotForm, UserProfileForm
@@ -187,7 +187,7 @@ def auth_status(request):
     )
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def login_api(request):
     """JSONベースのログイン。"""
@@ -226,7 +226,7 @@ def login_api(request):
     )
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def logout_api(request):
     """ログアウトAPI。"""
@@ -237,7 +237,7 @@ def logout_api(request):
     return response
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def register_api(request):
     """ユーザー登録API。"""
@@ -309,7 +309,7 @@ def profile_api(request):
     )
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def add_review_api(request, spot_id: int):
     """レビュー投稿API。"""
@@ -353,7 +353,7 @@ def add_review_api(request, spot_id: int):
     )
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def toggle_favorite_api(request, spot_id: int):
     """お気に入り状態をトグルするAPI。"""
@@ -376,7 +376,7 @@ def toggle_favorite_api(request, spot_id: int):
     return JsonResponse({"success": True, "is_favorite": is_now_favorite})
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def add_spot_via_api(request):
     """スポット投稿API (FormData対応)。"""
@@ -403,7 +403,7 @@ def add_spot_via_api(request):
     )
 
 
-@csrf_exempt
+@csrf_protect
 @require_POST
 def record_view_api(request, spot_id: int):
     """滞在時間の記録API。"""
