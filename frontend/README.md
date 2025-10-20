@@ -1,6 +1,6 @@
 # TripLog Next.js フロントエンド
 
-Django 製 TripLog のテンプレート UI を Next.js + Tailwind CSS に移行したフロントエンドです。Django 側の JSON API (`/spots/api/...`) を利用してページを構築します。
+Django 製 TripLog のテンプレート UI を Next.js + Tailwind CSS に移行したフロントエンドです。Django 側の JSON API (`/api/...`) を利用してページを構築します。
 
 ## セットアップ
 
@@ -30,4 +30,4 @@ NEXT_PUBLIC_DJANGO_BASE_URL=http://localhost:8000
 
 ## API 連携
 
-Next.js の API Routes 経由で Django のセッション Cookie を共有しています。ログインや投稿などの操作は `/spots/api/...` にプロキシされます。
+Next.js の API Routes 経由で Django のセッション Cookie を共有しています。ログインや投稿などの操作は `/api/...` にプロキシされます。

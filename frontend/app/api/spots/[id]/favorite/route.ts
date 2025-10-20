@@ -7,5 +7,5 @@ interface Params {
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
-  return forwardJson(request, `/spots/api/spots/${params.id}/favorite-toggle/`);
+  return forwardJson(request, `/api/spots/${params.id}/favorite-toggle/`);
 }

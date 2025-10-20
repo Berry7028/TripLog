@@ -4,5 +4,5 @@ import { forwardFormData } from '../../_utils/forward';
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  return forwardFormData(request, '/spots/api/spots/add/form/', formData);
+  return forwardFormData(request, '/api/spots/add/form/', formData);
 }
