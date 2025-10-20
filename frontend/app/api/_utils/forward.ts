@@ -47,10 +47,13 @@ export async function forwardJson(request: NextRequest, path: string, init: Requ
   const method = (init.method || request.method || 'GET').toUpperCase();
   const bodyToSend = init.body ?? (rawBody.length > 0 && method !== 'GET' && method !== 'HEAD' ? rawBody : undefined);
 
+  const { body: _ignoredBody, method: _ignoredMethod, headers: _ignoredHeaders, ...rest } = init;
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
+    ...rest,
+    method,
     headers,
-    body: bodyToSend,
+    ...(bodyToSend !== undefined ? { body: bodyToSend } : {}),
     redirect: 'manual',
   });
 
