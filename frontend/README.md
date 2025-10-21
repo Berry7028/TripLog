@@ -19,9 +19,7 @@ NEXT_PUBLIC_DJANGO_BASE_URL=https://api.example.com
 # ほかにも以下の環境変数名を認識します（必要なものだけ設定してください）
 # NEXT_PUBLIC_API_BASE_URL=https://api.example.com
 # NEXT_PUBLIC_BACKEND_URL=https://api.example.com
-# API_BASE_URL=https://api.example.com
-# DJANGO_API_BASE_URL=https://api.example.com
-# BACKEND_URL=https://api.example.com
+# (Next.js の制約上、NEXT_PUBLIC_ で始まる名前のみクライアントから利用できます)
 ```
 
 `frontend/.env.example` にサンプル値も用意しています。必要な値をコピーして `.env.local`（開発）や本番の環境変数に適用してください。
