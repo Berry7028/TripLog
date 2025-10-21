@@ -226,6 +226,12 @@ run_fullstack() {
 
     trap 'print_info "停止シグナルを受信しました。サーバーを終了します..."; cleanup_fullstack' INT TERM
 
+    # 既存の8000番ポートプロセスを強制終了
+    if lsof -i :8000 >/dev/null 2>&1; then
+        print_warning "ポート8000を使用中のプロセスを強制終了します"
+        lsof -i :8000 | awk 'NR>1 {print $2}' | xargs kill -9 || true
+    fi
+
     set +e
     wait "$FULLSTACK_BACKEND_PID"
     backend_status=$?
