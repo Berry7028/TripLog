@@ -104,7 +104,7 @@ export default function Header({ currentUser: initialUser }: HeaderProps) {
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        <div className={`collapse navbar-collapse${isNavOpen ? ' show' : ''}`}>
+        <div className={` navbar-collapse${isNavOpen ? ' show' : ''}`}>
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             {navItems.map((item) => (
               <li className="nav-item" key={item.href}>
@@ -146,7 +146,7 @@ export default function Header({ currentUser: initialUser }: HeaderProps) {
                   {currentUser.username}
                 </Link>
                 {currentUser.isStaff ? (
-                  <Link href="/manage/" className="nav-link" onClick={closeNav}>
+                  <Link href="/manage" className="nav-link" onClick={closeNav}>
                     <i className="fas fa-cog me-1" aria-hidden="true"></i>
                     管理
                   </Link>

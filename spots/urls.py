@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/auth/login/', api_views.login_api, name='login_api'),
     path('api/auth/logout/', api_views.logout_api, name='logout_api'),
     path('api/auth/register/', api_views.register_api, name='register_api'),
+    path('api/admin/dashboard/', api_views.admin_dashboard_data, name='admin_dashboard_api'),
 
     # 地図・プラン
     path('map/', views.map_view, name='map'),

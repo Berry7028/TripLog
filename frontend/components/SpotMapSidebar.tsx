@@ -1,8 +1,6 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo } from 'react';
 
 import type { SpotFilter, SpotSummary } from '@/types/api';
 
@@ -23,7 +21,7 @@ function formatDate(dateString: string | null | undefined): string {
   }
   try {
     return new Date(dateString).toLocaleDateString('ja-JP');
-  } catch (error) {
+  } catch {
     return dateString;
   }
 }
@@ -38,89 +36,75 @@ export default function SpotMapSidebar({
   isLoading = false,
   error = null,
 }: SpotMapSidebarProps) {
-  const detailContent = useMemo(() => {
-    if (!selectedSpot) {
-      return <p className="text-sm text-slate-500">地図上のスポットをクリックして詳細を表示します。</p>;
-    }
-    return (
-      <div className="space-y-4 text-sm text-slate-600">
-        <div className="space-y-3">
-          {selectedSpot.image ? (
-            <div className="relative h-48 w-full overflow-hidden rounded-xl bg-slate-100">
-              <Image
-                src={selectedSpot.image}
-                alt={selectedSpot.title}
-                fill
-                sizes="(max-width: 768px) 100vw, 320px"
-                className="object-cover"
-              />
+  return (
+    <>
+      <div className="details-surface" id="spotInfoPanel">
+        <div className="d-flex justify-content-between align-items-center">
+          <h3 className="details-title mb-0">スポット詳細</h3>
+          {isLoading ? <small className="text-muted">更新中...</small> : null}
+        </div>
+        <div id="spotInfoContent" className="pt-2">
+          {error ? (
+            <div className="alert alert-warning mb-0" role="alert">
+              データの読み込みに失敗しました。時間をおいて再度お試しください。
             </div>
+          ) : selectedSpot ? (
+            <>
+              {selectedSpot.image ? (
+                <div className="text-center mb-3">
+                  <img
+                    src={selectedSpot.image}
+                    alt={selectedSpot.title}
+                    className="img-fluid rounded mb-3"
+                    style={{ maxHeight: '200px', objectFit: 'cover', width: '100%' }}
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-muted py-4">
+                  <i className="fas fa-image fa-3x mb-2"></i>
+                  <div>画像は登録されていません。</div>
+                </div>
+              )}
+              <h5>{selectedSpot.title}</h5>
+              <p className="mb-2">{selectedSpot.description || '説明は登録されていません。'}</p>
+              {selectedSpot.address ? (
+                <p>
+                  <i className="fas fa-map-marker-alt me-1"></i>
+                  {selectedSpot.address}
+                </p>
+              ) : null}
+              <div className="d-flex justify-content-between align-items-center">
+                <small className="text-muted">
+                  <i className="fas fa-user me-1"></i>
+                  {selectedSpot.created_by}
+                  <br />
+                  <i className="fas fa-calendar me-1"></i>
+                  {formatDate(selectedSpot.created_at)}
+                </small>
+                <Link href={`/spots/${selectedSpot.id}`} className="btn btn-primary btn-sm">
+                  詳細を見る
+                </Link>
+              </div>
+            </>
           ) : (
-            <div className="flex h-48 w-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400">
-              画像は登録されていません
-            </div>
+            <div className="text-muted py-4">地図上のスポットをクリックして詳細を表示</div>
           )}
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-slate-900">{selectedSpot.title}</h3>
-            <p className="text-xs text-slate-500">{selectedSpot.address || '住所情報なし'}</p>
-          </div>
-        </div>
-        <p className="whitespace-pre-wrap text-sm leading-relaxed">{selectedSpot.description || '説明は登録されていません。'}</p>
-        <div className="rounded-lg bg-slate-100 px-4 py-3 text-xs text-slate-600">
-          <p>
-            投稿者: <span className="font-medium text-slate-800">{selectedSpot.created_by}</span>
-          </p>
-          <p>投稿日: {formatDate(selectedSpot.created_at)}</p>
-          {selectedSpot.tags?.length ? (
-            <p className="mt-2 flex flex-wrap gap-2 text-[11px]">
-              {selectedSpot.tags.map((tag) => (
-                <span key={tag} className="rounded-full bg-white px-2 py-1 text-slate-500 shadow-sm">
-                  #{tag}
-                </span>
-              ))}
-            </p>
-          ) : null}
-        </div>
-        <div>
-          <Link
-            href={`/spots/${selectedSpot.id}`}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
-          >
-            詳細ページへ
-          </Link>
         </div>
       </div>
-    );
-  }, [selectedSpot]);
 
-  return (
-    <div className="space-y-6">
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">スポット詳細</h2>
-          {isLoading && <span className="text-xs text-slate-400">更新中...</span>}
+      <div className="card mt-3">
+        <div className="card-header">
+          <h5 className="mb-0">
+            <i className="fas fa-filter me-2"></i>表示フィルター
+          </h5>
         </div>
-        {error ? (
-          <p className="text-sm text-red-500">データの読み込みに失敗しました。時間をおいて再度お試しください。</p>
-        ) : (
-          detailContent
-        )}
-      </section>
-
-      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">表示フィルター</h2>
-          {!isAuthenticated && (
-            <span className="text-[11px] text-slate-400">ログインで詳細な切替が可能</span>
-          )}
-        </div>
-        <div className="space-y-2 text-sm text-slate-600">
-          <label className="block text-xs font-medium text-slate-500" htmlFor="spot-filter">
+        <div className="card-body">
+          <label htmlFor="spot-filter" className="form-label">
             表示する投稿
           </label>
           <select
             id="spot-filter"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="form-select"
             value={filter}
             onChange={(event) => onFilterChange(event.target.value as SpotFilter)}
           >
@@ -128,43 +112,36 @@ export default function SpotMapSidebar({
             <option value="mine">自分のみ</option>
             <option value="others">他人のみ</option>
           </select>
-          <p className="text-xs text-slate-400">{isAuthenticated ? '投稿種別で地図上の表示を切り替えられます。' : 'ログイン中のみ「自分／他人」切替が有効です。'}</p>
-        </div>
-      </section>
-
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">最近のスポット</h2>
-          <span className="text-xs text-slate-400">{recentSpots.length} 件</span>
-        </div>
-        {recentSpots.length === 0 ? (
-          <p className="text-sm text-slate-500">最近のスポット情報がまだありません。</p>
-        ) : (
-          <div className="space-y-3">
-            {recentSpots.map((spot) => (
-              <button
-                type="button"
-                key={spot.id}
-                onClick={() => onSelectRecentSpot(spot)}
-                className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-primary/60 hover:shadow"
-              >
-                <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-slate-100">
-                  {spot.image ? (
-                    <Image src={spot.image} alt={spot.title} fill sizes="64px" className="object-cover" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[11px] text-slate-400">No Image</span>
-                  )}
-                </div>
-                <div className="flex-1 space-y-1 text-xs text-slate-500">
-                  <p className="text-sm font-semibold text-slate-900">{spot.title}</p>
-                  <p className="line-clamp-2">{spot.description || '説明は登録されていません。'}</p>
-                  <p>投稿日: {formatDate(spot.created_at)}</p>
-                </div>
-              </button>
-            ))}
+          <div className="form-text">
+            {isAuthenticated ? '投稿種別で地図上の表示を切り替えられます。' : 'ログイン中のみ「自分／他人」切替が有効です。'}
           </div>
-        )}
-      </section>
-    </div>
+        </div>
+      </div>
+
+      {recentSpots.length ? (
+        <div className="card mt-3">
+          <div className="card-header">
+            <h5 className="mb-0">
+              <i className="fas fa-list me-2"></i>最近のスポット
+            </h5>
+          </div>
+          <div className="card-body">
+            <div className="list-group">
+              {recentSpots.map((spot) => (
+                <Link
+                  key={spot.id}
+                  href={`/spots/${spot.id}`}
+                  className="list-group-item list-group-item-action"
+                  onMouseEnter={() => onSelectRecentSpot(spot)}
+                  onFocus={() => onSelectRecentSpot(spot)}
+                >
+                  {spot.title}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
@@ -17,7 +18,15 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .forms import ReviewForm, SpotForm, UserProfileForm
-from .models import Review, Spot, UserProfile
+from .models import (
+    RecommendationJobLog,
+    Review,
+    Spot,
+    SpotView,
+    Tag,
+    UserProfile,
+    UserRecommendationScore,
+)
 from .services.homepage import fetch_homepage_spots
 from .services.interactions import (
     fetch_related_spots,
@@ -74,6 +83,115 @@ def home_data(request):
             "recommendation_source": result.recommendation_source,
             "recommendation_notice": result.recommendation_notice,
             "recommendation_scored_ids": list(recommendation_ids),
+        }
+    )
+
+
+@require_GET
+def admin_dashboard_data(request):
+    """管理ダッシュボード向けデータを返す。"""
+
+    if not getattr(request.user, "is_authenticated", False):
+        return JsonResponse({"success": False, "error": "ログインが必要です。"}, status=401)
+    if not getattr(request.user, "is_staff", False):
+        return JsonResponse({"success": False, "error": "管理者権限が必要です。"}, status=403)
+
+    now = timezone.now()
+    week_ago = now - timedelta(days=7)
+
+    new_spots = (
+        Spot.objects.select_related("created_by")
+        .order_by("-created_at")
+        .prefetch_related("tags")[:5]
+    )
+    recent_reviews = (
+        Review.objects.select_related("spot", "user")
+        .order_by("-created_at")[:5]
+    )
+    top_spots = (
+        Spot.objects.annotate(
+            weekly_views=Count(
+                "spot_views",
+                filter=Q(spot_views__viewed_at__gte=week_ago),
+                distinct=True,
+            ),
+            review_avg=Avg("reviews__rating"),
+        )
+        .select_related("created_by")
+        .order_by("-weekly_views", "-created_at")[:5]
+    )
+    popular_tags = Tag.objects.annotate(
+        spot_count=Count("spots", distinct=True)
+    ).order_by("-spot_count", "name")[:10]
+    top_reviewers = (
+        User.objects.annotate(review_count=Count("review", distinct=True))
+        .filter(review_count__gt=0)
+        .order_by("-review_count", "username")[:5]
+    )
+    ai_generated_spots = (
+        Spot.objects.filter(is_ai_generated=True)
+        .select_related("created_by")
+        .order_by("-updated_at")[:5]
+    )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "totals": {
+                "spots": Spot.objects.count(),
+                "reviews": Review.objects.count(),
+                "users": User.objects.count(),
+                "tags": Tag.objects.count(),
+                "views_last_week": SpotView.objects.filter(
+                    viewed_at__gte=week_ago
+                ).count(),
+                "ai_scores": UserRecommendationScore.objects.count(),
+            },
+            "new_spots": [serialize_spot_summary(spot) for spot in new_spots],
+            "recent_reviews": [
+                {
+                    **serialize_review(review),
+                    "created_at": review.created_at.isoformat() if review.created_at else None,
+                    "spot_title": review.spot.title if review.spot else None,
+                    "user_username": review.user.username if review.user else None,
+                }
+                for review in recent_reviews
+            ],
+            "top_spots": [
+                {
+                    "id": spot.id,
+                    "title": spot.title,
+                    "weekly_views": spot.weekly_views or 0,
+                    "review_avg": spot.review_avg,
+                    "created_at": spot.created_at.isoformat() if spot.created_at else None,
+                }
+                for spot in top_spots
+            ],
+            "ai_generated_spots": [
+                {
+                    "id": spot.id,
+                    "title": spot.title,
+                    "updated_at": spot.updated_at.isoformat() if spot.updated_at else None,
+                    "created_by": spot.created_by.username if spot.created_by else None,
+                }
+                for spot in ai_generated_spots
+            ],
+            "popular_tags": [
+                {"id": tag.id, "name": tag.name, "spot_count": tag.spot_count}
+                for tag in popular_tags
+            ],
+            "top_reviewers": [
+                {"id": user.id, "username": user.username, "review_count": user.review_count}
+                for user in top_reviewers
+            ],
+            "recent_job_logs": [
+                {
+                    "id": log.id,
+                    "status": log.status,
+                    "created_at": log.created_at.isoformat() if log.created_at else None,
+                }
+                for log in RecommendationJobLog.objects.order_by("-created_at")[:5]
+            ],
         }
     )
 

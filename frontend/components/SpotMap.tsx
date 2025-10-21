@@ -16,7 +16,7 @@ interface SpotMapProps {
   selectedSpotId?: number | null;
 }
 
-const defaultPosition: [number, number] = [35.681236, 139.767125];
+const defaultPosition: [number, number] = [35.6762, 139.6503];
 
 const defaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -53,9 +53,13 @@ export default function SpotMap({ spots, filter, onSelect, selectedSpotId }: Spo
   }, [selectedSpotId, spots]);
 
   return (
-    <div className="relative h-[600px] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <div className="map-frame" style={{ height: '100%', minHeight: '600px', width: '100%' }}>
       <MapContainer
-        {...({ center: activeCenter, zoom: 6, scrollWheelZoom: true, className: 'h-full w-full' } as any)}
+        center={activeCenter}
+        zoom={10}
+        scrollWheelZoom
+        style={{ height: '100%', width: '100%' }}
+        className="h-100 w-100"
       >
         <MapAutoCenter center={activeCenter} />
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -70,10 +74,10 @@ export default function SpotMap({ spots, filter, onSelect, selectedSpotId }: Spo
             }}
           >
             <Popup>
-              <div className="space-y-1 text-sm">
+              <div className="text-sm">
                 <strong>{spot.title}</strong>
-                <p className="text-xs text-slate-500">{spot.address}</p>
-                <Link href={`/spots/${spot.id}`} className="text-primary">
+                <p className="text-muted small mb-1">{spot.address}</p>
+                <Link href={`/spots/${spot.id}`} className="btn btn-primary btn-sm">
                   詳細を見る
                 </Link>
               </div>
@@ -82,7 +86,7 @@ export default function SpotMap({ spots, filter, onSelect, selectedSpotId }: Spo
         ))}
       </MapContainer>
       {spots.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-center text-sm text-slate-500">
+        <div className="d-flex align-items-center justify-content-center text-muted small" style={{ height: '100%' }}>
           {filter === 'mine'
             ? 'まだ自分の投稿がありません。'
             : filter === 'others'

@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 import { buildApiUrl } from './config';
 import { buildQueryString, type QueryParams } from './api-helpers';
-import type { AuthStatusResponse } from '@/types/api';
+import type { AdminDashboardResponse, AuthStatusResponse } from '@/types/api';
 
 async function getJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const cookieStore = cookies();
@@ -62,4 +62,8 @@ export async function fetchRanking() {
 export async function fetchSpotsByFilter(params: QueryParams = {}) {
   const qs = buildQueryString(params);
   return getJson<any>(`/api/spots/${qs}`);
+}
+
+export async function fetchAdminDashboard() {
+  return getJson<AdminDashboardResponse>('/api/admin/dashboard/');
 }

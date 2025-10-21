@@ -161,3 +161,50 @@ export interface AuthSuccessResponse {
     email: string;
   };
 }
+
+export interface AdminDashboardResponse {
+  success: boolean;
+  totals: {
+    spots: number;
+    reviews: number;
+    users: number;
+    tags: number;
+    views_last_week: number;
+    ai_scores: number;
+  };
+  new_spots: SpotSummary[];
+  recent_reviews: Array<
+    ReviewPayload & {
+      spot_title?: string | null;
+      user_username?: string | null;
+    }
+  >;
+  top_spots: Array<{
+    id: number;
+    title: string;
+    weekly_views: number;
+    review_avg: number | null;
+    created_at: string | null;
+  }>;
+  ai_generated_spots: Array<{
+    id: number;
+    title: string;
+    updated_at: string | null;
+    created_by: string | null;
+  }>;
+  popular_tags: Array<{
+    id: number;
+    name: string;
+    spot_count: number;
+  }>;
+  top_reviewers: Array<{
+    id: number;
+    username: string;
+    review_count: number;
+  }>;
+  recent_job_logs: Array<{
+    id: number;
+    status: string;
+    created_at: string | null;
+  }>;
+}
