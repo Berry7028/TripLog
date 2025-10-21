@@ -41,10 +41,8 @@ export default function Header({ currentUser: initialUser }: HeaderProps) {
     setSortParam(params.get('sort') ?? '');
   }, []);
 
-  useEffect(() => {
-    if (initialUser !== undefined) {
-      return;
-    }
+  // 認証状態を更新する関数
+  const updateAuthStatus = () => {
     fetchAuthStatus()
       .then((auth: AuthStatusResponse) => {
         if (auth.is_authenticated && auth.user) {
@@ -60,7 +58,26 @@ export default function Header({ currentUser: initialUser }: HeaderProps) {
       .catch(() => {
         setCurrentUser(null);
       });
+  };
+
+  useEffect(() => {
+    if (initialUser !== undefined) {
+      return;
+    }
+    updateAuthStatus();
   }, [initialUser]);
+
+  // ログイン/ログアウトイベントをリッスン
+  useEffect(() => {
+    const handleAuthChange = () => {
+      updateAuthStatus();
+    };
+
+    window.addEventListener('authStateChanged', handleAuthChange);
+    return () => {
+      window.removeEventListener('authStateChanged', handleAuthChange);
+    };
+  }, []);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

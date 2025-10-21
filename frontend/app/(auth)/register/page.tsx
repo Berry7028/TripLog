@@ -44,12 +44,13 @@ export default function RegisterPage() {
       const errorMessage =
         detail.error || (detail.errors && Object.values(detail.errors as Record<string, string[]>)[0]?.[0]);
       setError(errorMessage || '登録に失敗しました。');
+      setIsSubmitting(false);
     } else {
+      // 認証状態変更イベントを発火
+      window.dispatchEvent(new Event('authStateChanged'));
       router.push('/');
       router.refresh();
     }
-
-    setIsSubmitting(false);
   };
 
   return (

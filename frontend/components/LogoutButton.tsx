@@ -28,6 +28,8 @@ export default function LogoutButton({ className }: LogoutButtonProps) {
         },
       });
       if (response.ok) {
+        // 認証状態変更イベントを発火
+        window.dispatchEvent(new Event('authStateChanged'));
         router.push('/');
         router.refresh();
       }

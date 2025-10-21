@@ -37,12 +37,13 @@ export default function LoginPage() {
     if (!response.ok) {
       const detail = await response.json();
       setError(detail.error || 'ログインに失敗しました。');
+      setIsSubmitting(false);
     } else {
+      // 認証状態変更イベントを発火
+      window.dispatchEvent(new Event('authStateChanged'));
       router.push('/');
       router.refresh();
     }
-
-    setIsSubmitting(false);
   };
 
   return (
