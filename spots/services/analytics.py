@@ -21,7 +21,7 @@ class RecommendationResult:
     """並び替え結果とメタ情報を保持するデータクラス。"""
 
     spots: List
-    source: str = 'none'  # 'api' | 'fallback' | 'none' のいずれかを示す
+    source: str = "none"  # 'api' | 'fallback' | 'none' のいずれかを示す
     scored_spot_ids: Set[int] = field(default_factory=set)
     scores: Dict[int, float] = field(default_factory=dict)
 
@@ -30,14 +30,14 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
     """ユーザーの閲覧傾向に基づいてスポットを並び替える。"""
 
     spots_list = list(spots)
-    if not spots_list or user is None or not getattr(user, 'is_authenticated', False):
+    if not spots_list or user is None or not getattr(user, "is_authenticated", False):
         return RecommendationResult(spots_list)
 
     spot_ids = [spot.id for spot in spots_list]
     interactions = list(
         UserSpotInteraction.objects.filter(user=user, spot_id__in=spot_ids)
-        .select_related('spot')
-        .prefetch_related('spot__tags')
+        .select_related("spot")
+        .prefetch_related("spot__tags")
     )
     if not interactions:
         return RecommendationResult(spots_list)
@@ -45,14 +45,13 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
     # 全スポット情報をAIに渡して、未閲覧スポットも含めて分析させる
     api_scores = _request_scores_from_openai(user, interactions, all_spots=spots_list)
     scores: Dict[int, float]
-    source = 'none'
+    source = "none"
 
     if api_scores:
         scores = {
-            spot_id: round(float(score_value), 4)
-            for spot_id, score_value in api_scores.items()
+            spot_id: round(float(score_value), 4) for spot_id, score_value in api_scores.items()
         }
-        source = 'api'
+        source = "api"
     else:
         fallback_scores = {
             interaction.spot_id: _compute_fallback_score(interaction)
@@ -63,7 +62,7 @@ def order_spots_by_relevance(spots: Sequence, user) -> RecommendationResult:
                 spot_id: round(float(score_value), 4)
                 for spot_id, score_value in fallback_scores.items()
             }
-            source = 'fallback'
+            source = "fallback"
         else:
             return RecommendationResult(spots_list)
 
@@ -108,115 +107,117 @@ def _request_scores_from_openai(
     all_spots: Sequence = None,
 ) -> Dict[int, float]:
     """OpenAI API からスコアを取得する。失敗時は空 dict を返す。
-    
+
     Args:
         user: 対象ユーザー
         user_interactions: ユーザーの閲覧履歴
         all_spots: 全スポットのリスト。Noneの場合は閲覧済みスポットのみスコアリング
     """
 
-    api_key = getattr(settings, 'OPENAI_API_KEY', None)
+    api_key = getattr(settings, "OPENAI_API_KEY", None)
     if not api_key:
-        logger.debug('OPENAI_API_KEY が設定されていないため、API連携をスキップします。')
+        logger.debug("OPENAI_API_KEY が設定されていないため、API連携をスキップします。")
         return {}
 
     url = getattr(
         settings,
-        'OPENAI_RECOMMENDATION_URL',
-        'https://api.openai.com/v1/chat/completions',
+        "OPENAI_RECOMMENDATION_URL",
+        "https://api.openai.com/v1/chat/completions",
     )
-    model = getattr(settings, 'OPENAI_RECOMMENDATION_MODEL', 'gpt-4o-mini')
-    timeout = getattr(settings, 'OPENAI_TIMEOUT', 15)
+    model = getattr(settings, "OPENAI_RECOMMENDATION_MODEL", "gpt-4o-mini")
+    timeout = getattr(settings, "OPENAI_TIMEOUT", 15)
 
     # ユーザーの閲覧履歴
     interaction_payload = [_serialize_interaction(interaction) for interaction in user_interactions]
-    
+
     # スコアリング対象のスポット一覧
     target_spots_payload = []
     if all_spots:
         # 全スポットをスコアリング対象とする
         for spot in all_spots:
-            target_spots_payload.append({
-                'spot_id': spot.id,
-                'title': spot.title,
-                'description': spot.description,
-                'tags': [tag.name for tag in spot.tags.all()],
-            })
-    
+            target_spots_payload.append(
+                {
+                    "spot_id": spot.id,
+                    "title": spot.title,
+                    "description": spot.description,
+                    "tags": [tag.name for tag in spot.tags.all()],
+                }
+            )
+
     system_prompt = (
-        'あなたは旅行アプリのレコメンドAIです。ユーザーの閲覧履歴を受け取り、'
-        '各スポットの関連度スコア(0〜100)を JSON 形式で返してください。\n\n'
-        '重要な指示:\n'
-        '1. ユーザーが過去に閲覧したスポット(interactions)の傾向を分析してください。\n'
-        '2. 全スポットリスト(target_spots)には、ユーザーがまだ見ていないスポットも含まれています。\n'
-        '3. 閲覧済みスポットと類似のタグ、説明、テーマを持つ未閲覧スポットは、高いスコアを付けてください。\n'
-        '4. ユーザーの興味・嗜好に合致する新しい発見となるスポットを積極的に推薦してください。\n'
-        '5. score フィールドは必ず小数点付き(例: 82.50)で表現し、100.00 を超えないようにしてください。\n'
+        "あなたは旅行アプリのレコメンドAIです。ユーザーの閲覧履歴を受け取り、"
+        "各スポットの関連度スコア(0〜100)を JSON 形式で返してください。\n\n"
+        "重要な指示:\n"
+        "1. ユーザーが過去に閲覧したスポット(interactions)の傾向を分析してください。\n"
+        "2. 全スポットリスト(target_spots)には、ユーザーがまだ見ていないスポットも含まれています。\n"
+        "3. 閲覧済みスポットと類似のタグ、説明、テーマを持つ未閲覧スポットは、高いスコアを付けてください。\n"
+        "4. ユーザーの興味・嗜好に合致する新しい発見となるスポットを積極的に推薦してください。\n"
+        "5. score フィールドは必ず小数点付き(例: 82.50)で表現し、100.00 を超えないようにしてください。\n"
         '6. 出力形式: {"scores": [{"spot_id": number, "score": number, "reason": string}]}\n'
-        '   reasonには推薦理由を簡潔に記述してください(任意)。'
+        "   reasonには推薦理由を簡潔に記述してください(任意)。"
     )
 
     user_message_content = {
-        'user': user.username,
-        'interactions': interaction_payload,
+        "user": user.username,
+        "interactions": interaction_payload,
     }
     if target_spots_payload:
-        user_message_content['target_spots'] = target_spots_payload
+        user_message_content["target_spots"] = target_spots_payload
 
     messages = [
-        {"role": 'system', "content": system_prompt},
+        {"role": "system", "content": system_prompt},
         {
-            "role": 'user',
+            "role": "user",
             "content": json.dumps(user_message_content, ensure_ascii=False),
         },
     ]
 
     headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
     }
 
     payload = {
-        'model': model,
-        'messages': messages,
+        "model": model,
+        "messages": messages,
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
     except Exception as exc:  # pragma: no cover - ネットワーク例外はログのみ
-        logger.warning('OpenAI API の呼び出しに失敗しました: %s', exc)
+        logger.warning("OpenAI API の呼び出しに失敗しました: %s", exc)
         return {}
 
     try:
         response_data = response.json()
     except ValueError:  # pragma: no cover - 想定外のレスポンス
-        logger.warning('OpenAI API のレスポンスが JSON ではありません。')
+        logger.warning("OpenAI API のレスポンスが JSON ではありません。")
         return {}
 
     try:
-        message_content = response_data['choices'][0]['message']['content']
+        message_content = response_data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError):
-        logger.warning('OpenAI API のレスポンス形式が想定外です: %s', response_data)
+        logger.warning("OpenAI API のレスポンス形式が想定外です: %s", response_data)
         return {}
 
     try:
         parsed = json.loads(message_content)
     except json.JSONDecodeError:
-        logger.warning('OpenAI API の応答が JSON 文字列ではありません: %s', message_content)
+        logger.warning("OpenAI API の応答が JSON 文字列ではありません: %s", message_content)
         return {}
 
     scores: Dict[int, float] = {}
     reasons: Dict[int, str] = {}
-    for item in parsed.get('scores', []):
+    for item in parsed.get("scores", []):
         try:
-            spot_id = int(item['spot_id'])
-            score = float(item['score'])
+            spot_id = int(item["spot_id"])
+            score = float(item["score"])
         except (KeyError, TypeError, ValueError):
             continue
         scores[spot_id] = score
-        if 'reason' in item and isinstance(item['reason'], str):
-            reasons[spot_id] = item['reason']
+        if "reason" in item and isinstance(item["reason"], str):
+            reasons[spot_id] = item["reason"]
 
     # reasonsも保存できるようにするため、追加情報として返す
     # (既存の戻り値との互換性のため、scoresのみ返すが、必要に応じて拡張可能)
@@ -226,12 +227,11 @@ def _request_scores_from_openai(
 def _serialize_interaction(interaction: UserSpotInteraction) -> Dict:
     spot = interaction.spot
     return {
-        'spot_id': spot.id,
-        'title': spot.title,
-        'description': spot.description,
-        'tags': [tag.name for tag in spot.tags.all()],
-        'view_count': interaction.view_count,
-        'total_view_seconds': interaction.total_view_duration.total_seconds(),
-        'last_viewed_at': interaction.last_viewed_at.isoformat(),
+        "spot_id": spot.id,
+        "title": spot.title,
+        "description": spot.description,
+        "tags": [tag.name for tag in spot.tags.all()],
+        "view_count": interaction.view_count,
+        "total_view_seconds": interaction.total_view_duration.total_seconds(),
+        "last_viewed_at": interaction.last_viewed_at.isoformat(),
     }
-

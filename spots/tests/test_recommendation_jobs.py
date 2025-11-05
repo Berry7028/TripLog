@@ -26,14 +26,14 @@ from spots.services import (
 
 class RecommendationJobServiceTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='jobs-user', password='pass12345')
-        self.tag = Tag.objects.create(name='夜景')
+        self.user = User.objects.create_user(username="jobs-user", password="pass12345")
+        self.tag = Tag.objects.create(name="夜景")
         self.spot = Spot.objects.create(
-            title='夜景スポット',
-            description='とても綺麗な夜景',
+            title="夜景スポット",
+            description="とても綺麗な夜景",
             latitude=35.0,
             longitude=135.0,
-            address='大阪府',
+            address="大阪府",
             created_by=self.user,
         )
         self.spot.tags.add(self.tag)
@@ -47,37 +47,37 @@ class RecommendationJobServiceTests(TestCase):
     def test_tool_schema_contains_expected_function(self):
         schema = build_recommendation_tool_schema()
         self.assertTrue(schema)
-        self.assertEqual(schema[0]['function']['name'], 'store_user_recommendation_scores')
+        self.assertEqual(schema[0]["function"]["name"], "store_user_recommendation_scores")
 
     def test_tool_context_includes_interactions(self):
         context = build_recommendation_tool_context(self.user, [self.interaction])
-        self.assertEqual(context['user']['id'], self.user.id)
-        self.assertEqual(len(context['interactions']), 1)
-        self.assertEqual(context['interactions'][0]['spot_id'], self.spot.id)
+        self.assertEqual(context["user"]["id"], self.user.id)
+        self.assertEqual(len(context["interactions"]), 1)
+        self.assertEqual(context["interactions"][0]["spot_id"], self.spot.id)
 
     def test_store_recommendation_scores_creates_log(self):
         arguments = {
-            'user_id': self.user.id,
-            'schema_version': '1.0',
-            'source': 'api',
-            'scores': [{'spot_id': self.spot.id, 'score': 42.5, 'reason': '人気'}],
+            "user_id": self.user.id,
+            "schema_version": "1.0",
+            "source": "api",
+            "scores": [{"spot_id": self.spot.id, "score": 42.5, "reason": "人気"}],
         }
         log = store_recommendation_scores(arguments)
         self.assertEqual(log.user, self.user)
-        self.assertEqual(log.source, 'api')
+        self.assertEqual(log.source, "api")
         self.assertEqual(log.scored_spot_ids, [self.spot.id])
-        self.assertEqual(log.metadata['tool_payload']['scores'][0]['reason'], '人気')
+        self.assertEqual(log.metadata["tool_payload"]["scores"][0]["reason"], "人気")
 
     def test_run_recommendation_for_user_creates_log(self):
         RecommendationJobLog.objects.all().delete()
-        result = run_recommendation_for_user(self.user, triggered_by='admin')
+        result = run_recommendation_for_user(self.user, triggered_by="admin")
         self.assertIsNotNone(result)
         self.assertGreaterEqual(len(result.scored_spot_ids), 1)
         self.assertEqual(RecommendationJobLog.objects.count(), 1)
 
     def test_run_recommendation_for_user_without_persist(self):
         RecommendationJobLog.objects.all().delete()
-        result = run_recommendation_for_user(self.user, triggered_by='admin', persist_log=False)
+        result = run_recommendation_for_user(self.user, triggered_by="admin", persist_log=False)
         self.assertIsNotNone(result)
         self.assertEqual(RecommendationJobLog.objects.count(), 0)
 
@@ -95,14 +95,14 @@ class RecommendationJobServiceTests(TestCase):
 
 class RunRecommendationJobsCommandTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='runner', password='pass12345')
-        self.tag = Tag.objects.create(name='展望台')
+        self.user = User.objects.create_user(username="runner", password="pass12345")
+        self.tag = Tag.objects.create(name="展望台")
         self.spot = Spot.objects.create(
-            title='展望台スポット',
-            description='眺めが良い',
+            title="展望台スポット",
+            description="眺めが良い",
             latitude=36.0,
             longitude=138.0,
-            address='長野県',
+            address="長野県",
             created_by=self.user,
         )
         self.spot.tags.add(self.tag)
@@ -120,14 +120,14 @@ class RunRecommendationJobsCommandTests(TestCase):
         setting.save()
 
         out = StringIO()
-        call_command('run_recommendation_jobs', stdout=out)
-        self.assertIn('スキップ', out.getvalue())
+        call_command("run_recommendation_jobs", stdout=out)
+        self.assertIn("スキップ", out.getvalue())
 
     def test_command_executes_with_force(self):
         RecommendationJobLog.objects.all().delete()
         out = StringIO()
-        call_command('run_recommendation_jobs', '--force', stdout=out)
-        self.assertIn('解析完了', out.getvalue())
+        call_command("run_recommendation_jobs", "--force", stdout=out)
+        self.assertIn("解析完了", out.getvalue())
         self.assertEqual(RecommendationJobLog.objects.count(), 1)
 
         setting = RecommendationJobSetting.objects.first()
@@ -136,20 +136,22 @@ class RunRecommendationJobsCommandTests(TestCase):
     def test_command_dry_run(self):
         RecommendationJobLog.objects.all().delete()
         out = StringIO()
-        call_command('run_recommendation_jobs', '--force', '--dry-run', stdout=out)
-        self.assertIn('ツールコールプレビュー', out.getvalue())
+        call_command("run_recommendation_jobs", "--force", "--dry-run", stdout=out)
+        self.assertIn("ツールコールプレビュー", out.getvalue())
         self.assertEqual(RecommendationJobLog.objects.count(), 0)
 
     def test_command_filters_user(self):
         RecommendationJobLog.objects.all().delete()
         out = StringIO()
-        call_command('run_recommendation_jobs', '--user-id', str(self.user.id), '--force', stdout=out)
+        call_command(
+            "run_recommendation_jobs", "--user-id", str(self.user.id), "--force", stdout=out
+        )
         self.assertIn(self.user.username, out.getvalue())
-        log = RecommendationJobLog.objects.latest('executed_at')
+        log = RecommendationJobLog.objects.latest("executed_at")
         self.assertEqual(log.triggered_by, RecommendationJobLog.TRIGGER_CLI)
 
     def test_command_prints_tool_schema(self):
         RecommendationJobLog.objects.all().delete()
         out = StringIO()
-        call_command('run_recommendation_jobs', '--print-tool-schema', stdout=out)
-        self.assertIn('store_user_recommendation_scores', out.getvalue())
+        call_command("run_recommendation_jobs", "--print-tool-schema", stdout=out)
+        self.assertIn("store_user_recommendation_scores", out.getvalue())

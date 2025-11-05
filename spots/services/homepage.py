@@ -65,11 +65,7 @@ def fetch_homepage_spots(
 
 
 def _base_queryset() -> QuerySet[Spot]:
-    return (
-        Spot.objects.all()
-        .select_related("created_by")
-        .prefetch_related("reviews", "tags")
-    )
+    return Spot.objects.all().select_related("created_by").prefetch_related("reviews", "tags")
 
 
 def _apply_search_filter(queryset: QuerySet[Spot], search_query: str) -> QuerySet[Spot]:
@@ -92,8 +88,7 @@ def _apply_recommendation_order(
         return spots, None, "おすすめ順を利用するにはログインしてください。", []
 
     user_scores = list(
-        UserRecommendationScore.objects.filter(user=user, spot__in=spots)
-        .select_related("spot")
+        UserRecommendationScore.objects.filter(user=user, spot__in=spots).select_related("spot")
     )
     if not user_scores:
         return (

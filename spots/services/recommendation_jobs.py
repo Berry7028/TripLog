@@ -22,8 +22,8 @@ from .analytics import RecommendationResult, order_spots_by_relevance
 
 logger = logging.getLogger(__name__)
 
-TOOL_NAME = 'store_user_recommendation_scores'
-TOOL_SCHEMA_VERSION = '1.0'
+TOOL_NAME = "store_user_recommendation_scores"
+TOOL_SCHEMA_VERSION = "1.0"
 DEFAULT_INTERVAL_HOURS = 1  # 1時間に1回実行
 
 
@@ -39,10 +39,10 @@ class RecommendationToolCall:
         """OpenAI 互換 API で利用できるツールコール形式に変換する。"""
 
         return {
-            'type': 'function',
-            'function': {
-                'name': self.name,
-                'arguments': json.dumps(self.arguments, ensure_ascii=False),
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "arguments": json.dumps(self.arguments, ensure_ascii=False),
             },
         }
 
@@ -50,7 +50,7 @@ class RecommendationToolCall:
 def get_or_create_job_setting() -> RecommendationJobSetting:
     """シングルトン設定を取得または作成する。"""
 
-    setting = RecommendationJobSetting.objects.order_by('id').first()
+    setting = RecommendationJobSetting.objects.order_by("id").first()
     if setting:
         return setting
     return RecommendationJobSetting.objects.create(interval_hours=DEFAULT_INTERVAL_HOURS)
@@ -75,7 +75,7 @@ def update_last_run(setting: RecommendationJobSetting, now=None) -> None:
     if now is None:
         now = timezone.now()
     setting.last_run_at = now
-    setting.save(update_fields=['last_run_at', 'updated_at'])
+    setting.save(update_fields=["last_run_at", "updated_at"])
 
 
 def build_recommendation_tool_schema() -> List[Dict[str, Any]]:
@@ -83,58 +83,58 @@ def build_recommendation_tool_schema() -> List[Dict[str, Any]]:
 
     return [
         {
-            'type': 'function',
-            'function': {
-                'name': TOOL_NAME,
-                'description': (
-                    'ユーザーごとのおすすめスコアを保存します。'
+            "type": "function",
+            "function": {
+                "name": TOOL_NAME,
+                "description": (
+                    "ユーザーごとのおすすめスコアを保存します。"
                     'scores 配列には {"spot_id": number, "score": number, "reason": string?} の形で渡してください。'
-                    'user_id または username を必ず含め、score は 0-100 の範囲を推奨します。'
+                    "user_id または username を必ず含め、score は 0-100 の範囲を推奨します。"
                 ),
-                'parameters': {
-                    'type': 'object',
-                    'properties': {
-                        'user_id': {
-                            'type': 'integer',
-                            'description': 'スコア対象ユーザーのID。指定が無い場合 username を利用します。',
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "user_id": {
+                            "type": "integer",
+                            "description": "スコア対象ユーザーのID。指定が無い場合 username を利用します。",
                         },
-                        'username': {
-                            'type': 'string',
-                            'description': 'スコア対象ユーザーのユーザー名。',
+                        "username": {
+                            "type": "string",
+                            "description": "スコア対象ユーザーのユーザー名。",
                         },
-                        'schema_version': {
-                            'type': 'string',
-                            'description': 'ツールコールのバージョン。現在は 1.0 を使用します。',
-                            'enum': [TOOL_SCHEMA_VERSION],
+                        "schema_version": {
+                            "type": "string",
+                            "description": "ツールコールのバージョン。現在は 1.0 を使用します。",
+                            "enum": [TOOL_SCHEMA_VERSION],
                         },
-                        'source': {
-                            'type': 'string',
-                            'description': 'スコア算出元 (api / fallback / manual など)。',
+                        "source": {
+                            "type": "string",
+                            "description": "スコア算出元 (api / fallback / manual など)。",
                         },
-                        'scores': {
-                            'type': 'array',
-                            'description': 'スポットごとのスコア一覧。',
-                            'items': {
-                                'type': 'object',
-                                'properties': {
-                                    'spot_id': {'type': 'integer'},
-                                    'score': {'type': 'number'},
-                                    'reason': {
-                                        'type': 'string',
-                                        'description': '任意の補足説明。',
+                        "scores": {
+                            "type": "array",
+                            "description": "スポットごとのスコア一覧。",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "spot_id": {"type": "integer"},
+                                    "score": {"type": "number"},
+                                    "reason": {
+                                        "type": "string",
+                                        "description": "任意の補足説明。",
                                     },
                                 },
-                                'required': ['spot_id', 'score'],
-                                'additionalProperties': False,
+                                "required": ["spot_id", "score"],
+                                "additionalProperties": False,
                             },
                         },
-                        'notes': {
-                            'type': 'string',
-                            'description': '解析メモや備考。',
+                        "notes": {
+                            "type": "string",
+                            "description": "解析メモや備考。",
                         },
                     },
-                    'required': ['scores'],
-                    'additionalProperties': False,
+                    "required": ["scores"],
+                    "additionalProperties": False,
                 },
             },
         }
@@ -148,24 +148,24 @@ def build_recommendation_tool_context(
     """LLM に渡すコンテキスト情報を構築する。"""
 
     payload = {
-        'schema_version': TOOL_SCHEMA_VERSION,
-        'user': {
-            'id': user.id,
-            'username': user.username,
+        "schema_version": TOOL_SCHEMA_VERSION,
+        "user": {
+            "id": user.id,
+            "username": user.username,
         },
-        'interactions': [],
+        "interactions": [],
     }
     for interaction in interactions:
         spot = interaction.spot
-        payload['interactions'].append(
+        payload["interactions"].append(
             {
-                'spot_id': spot.id,
-                'title': spot.title,
-                'description': spot.description,
-                'tags': [tag.name for tag in spot.tags.all()],
-                'view_count': interaction.view_count,
-                'total_view_seconds': interaction.total_view_duration.total_seconds(),
-                'last_viewed_at': interaction.last_viewed_at.isoformat(),
+                "spot_id": spot.id,
+                "title": spot.title,
+                "description": spot.description,
+                "tags": [tag.name for tag in spot.tags.all()],
+                "view_count": interaction.view_count,
+                "total_view_seconds": interaction.total_view_duration.total_seconds(),
+                "last_viewed_at": interaction.last_viewed_at.isoformat(),
             }
         )
     return payload
@@ -178,16 +178,16 @@ def build_tool_call_from_result(user, result: RecommendationResult) -> Recommend
     for spot_id in sorted(result.scored_spot_ids):
         scores.append(
             {
-                'spot_id': spot_id,
-                'score': float(result.scores.get(spot_id, 0.0)),
+                "spot_id": spot_id,
+                "score": float(result.scores.get(spot_id, 0.0)),
             }
         )
     arguments = {
-        'user_id': user.id,
-        'username': user.username,
-        'schema_version': TOOL_SCHEMA_VERSION,
-        'source': result.source,
-        'scores': scores,
+        "user_id": user.id,
+        "username": user.username,
+        "schema_version": TOOL_SCHEMA_VERSION,
+        "source": result.source,
+        "scores": scores,
     }
     return RecommendationToolCall(name=TOOL_NAME, arguments=arguments)
 
@@ -202,11 +202,11 @@ def store_recommendation_scores(
 
     user = _resolve_user(arguments)
     if user is None:
-        raise ValueError('ユーザー情報 (user_id または username) を特定できません。')
+        raise ValueError("ユーザー情報 (user_id または username) を特定できません。")
 
-    raw_scores = arguments.get('scores') or []
+    raw_scores = arguments.get("scores") or []
     if not isinstance(raw_scores, list):
-        raise ValueError('scores は配列である必要があります。')
+        raise ValueError("scores は配列である必要があります。")
 
     cleaned_scores: List[Dict[str, Any]] = []
     scored_ids: List[int] = []
@@ -214,25 +214,25 @@ def store_recommendation_scores(
         if not isinstance(item, dict):
             continue
         try:
-            spot_id = int(item['spot_id'])
-            score = float(item['score'])
+            spot_id = int(item["spot_id"])
+            score = float(item["score"])
         except (KeyError, TypeError, ValueError):
             continue
-        cleaned = {'spot_id': spot_id, 'score': round(score, 4)}
-        if 'reason' in item and isinstance(item['reason'], str):
-            cleaned['reason'] = item['reason']
+        cleaned = {"spot_id": spot_id, "score": round(score, 4)}
+        if "reason" in item and isinstance(item["reason"], str):
+            cleaned["reason"] = item["reason"]
         cleaned_scores.append(cleaned)
         scored_ids.append(spot_id)
 
-    source = arguments.get('source') or RecommendationJobLog.SOURCE_API
+    source = arguments.get("source") or RecommendationJobLog.SOURCE_API
 
     metadata_payload = metadata.copy() if metadata else {}
     metadata_payload.update(
         {
-            'tool_payload': {
-                'schema_version': arguments.get('schema_version', TOOL_SCHEMA_VERSION),
-                'scores': cleaned_scores,
-                'notes': arguments.get('notes'),
+            "tool_payload": {
+                "schema_version": arguments.get("schema_version", TOOL_SCHEMA_VERSION),
+                "scores": cleaned_scores,
+                "notes": arguments.get("notes"),
             }
         }
     )
@@ -242,25 +242,22 @@ def store_recommendation_scores(
     missing_spot_ids: List[int] = []
 
     if cleaned_scores:
-        spot_map = {
-            spot.id: spot
-            for spot in Spot.objects.filter(id__in=scored_ids)
-        }
+        spot_map = {spot.id: spot for spot in Spot.objects.filter(id__in=scored_ids)}
 
         scores_to_create: List[UserRecommendationScore] = []
         for item in cleaned_scores:
-            spot = spot_map.get(item['spot_id'])
+            spot = spot_map.get(item["spot_id"])
             if spot is None:
-                missing_spot_ids.append(item['spot_id'])
+                missing_spot_ids.append(item["spot_id"])
                 continue
 
             scores_to_create.append(
                 UserRecommendationScore(
                     user=user,
                     spot=spot,
-                    score=item['score'],
+                    score=item["score"],
                     source=source,
-                    reason=item.get('reason', ''),
+                    reason=item.get("reason", ""),
                 )
             )
             persisted_ids.append(spot.id)
@@ -276,9 +273,9 @@ def store_recommendation_scores(
 
     metadata_payload.update(
         {
-            'scores_saved': saved_count,
-            'missing_spot_ids': missing_spot_ids,
-            'decimal_precision': 4,
+            "scores_saved": saved_count,
+            "missing_spot_ids": missing_spot_ids,
+            "decimal_precision": 4,
         }
     )
 
@@ -302,8 +299,8 @@ def run_recommendation_for_user(
 
     interactions = list(
         UserSpotInteraction.objects.filter(user=user)
-        .select_related('spot')
-        .prefetch_related('spot__tags')
+        .select_related("spot")
+        .prefetch_related("spot__tags")
     )
     if not interactions:
         return None
@@ -315,8 +312,8 @@ def run_recommendation_for_user(
     if persist_log:
         tool_call = build_tool_call_from_result(user, result)
         metadata = {
-            'interaction_count': len(interactions),
-            'tool_context': tool_context,
+            "interaction_count": len(interactions),
+            "tool_context": tool_context,
         }
         store_recommendation_scores(
             tool_call.arguments,
@@ -332,8 +329,8 @@ def _resolve_user(arguments: Dict[str, Any]):
 
     User = get_user_model()
     user = None
-    user_id = arguments.get('user_id')
-    username = arguments.get('username')
+    user_id = arguments.get("user_id")
+    username = arguments.get("username")
 
     if user_id is not None:
         try:
@@ -353,37 +350,31 @@ def compute_and_store_all_user_scores(
     batch_size: int = 100,
 ) -> Dict[str, Any]:
     """全ユーザーのおすすめスコアをバックグラウンドで計算してDBに保存する。
-    
+
     Returns:
         実行結果のサマリー情報
     """
     User = get_user_model()
-    
+
     # 閲覧履歴があるユーザーのみ対象
-    users_with_interactions = User.objects.filter(
-        spot_interactions__isnull=False
-    ).distinct()
-    
+    users_with_interactions = User.objects.filter(spot_interactions__isnull=False).distinct()
+
     # 全スポットを取得(prefetchでタグも取得)
-    all_spots = list(
-        Spot.objects.all()
-        .prefetch_related('tags')
-        .order_by('id')
-    )
-    
+    all_spots = list(Spot.objects.all().prefetch_related("tags").order_by("id"))
+
     if not all_spots:
-        logger.info('スポットが存在しないため、スコア計算をスキップします。')
+        logger.info("スポットが存在しないため、スコア計算をスキップします。")
         return {
-            'success': True,
-            'users_processed': 0,
-            'scores_saved': 0,
-            'message': 'スポットが存在しません',
+            "success": True,
+            "users_processed": 0,
+            "scores_saved": 0,
+            "message": "スポットが存在しません",
         }
-    
+
     total_users = 0
     total_scores_saved = 0
     errors = []
-    
+
     for user in users_with_interactions:
         try:
             result = _compute_and_store_user_scores(
@@ -393,21 +384,21 @@ def compute_and_store_all_user_scores(
             )
             if result:
                 total_users += 1
-                total_scores_saved += result.get('scores_saved', 0)
+                total_scores_saved += result.get("scores_saved", 0)
                 logger.info(
                     f'ユーザー {user.username} のスコア計算完了: {result.get("scores_saved", 0)}件'
                 )
         except Exception as e:
-            error_msg = f'ユーザー {user.username} のスコア計算でエラー: {e}'
+            error_msg = f"ユーザー {user.username} のスコア計算でエラー: {e}"
             logger.error(error_msg)
             errors.append(error_msg)
-    
+
     return {
-        'success': len(errors) == 0,
-        'users_processed': total_users,
-        'scores_saved': total_scores_saved,
-        'errors': errors,
-        'timestamp': timezone.now().isoformat(),
+        "success": len(errors) == 0,
+        "users_processed": total_users,
+        "scores_saved": total_scores_saved,
+        "errors": errors,
+        "timestamp": timezone.now().isoformat(),
     }
 
 
@@ -418,29 +409,29 @@ def _compute_and_store_user_scores(
     triggered_by: str = RecommendationJobLog.TRIGGER_AUTO,
 ) -> Optional[Dict[str, Any]]:
     """指定ユーザーの全スポットに対するスコアを計算してDBに保存する。"""
-    
+
     # ユーザーの閲覧履歴を取得
     interactions = list(
         UserSpotInteraction.objects.filter(user=user)
-        .select_related('spot')
-        .prefetch_related('spot__tags')
+        .select_related("spot")
+        .prefetch_related("spot__tags")
     )
-    
+
     if not interactions:
         return None
-    
+
     # 全スポットをスコアリング
     result = order_spots_by_relevance(all_spots, user)
-    
+
     if not result.scores:
-        logger.warning(f'ユーザー {user.username} のスコア計算結果が空です')
+        logger.warning(f"ユーザー {user.username} のスコア計算結果が空です")
         return None
-    
+
     # トランザクション内でスコアを保存
     with transaction.atomic():
         # 既存のスコアを削除
         UserRecommendationScore.objects.filter(user=user).delete()
-        
+
         # 新しいスコアを一括作成
         scores_to_create = []
         for spot_id, score_value in result.scores.items():
@@ -455,10 +446,10 @@ def _compute_and_store_user_scores(
                         source=result.source,
                     )
                 )
-        
+
         if scores_to_create:
             UserRecommendationScore.objects.bulk_create(scores_to_create)
-        
+
         # ログを記録
         RecommendationJobLog.objects.create(
             user=user,
@@ -466,14 +457,14 @@ def _compute_and_store_user_scores(
             triggered_by=triggered_by,
             scored_spot_ids=list(result.scored_spot_ids),
             metadata={
-                'interaction_count': len(interactions),
-                'total_spots': len(all_spots),
-                'scored_count': len(result.scores),
+                "interaction_count": len(interactions),
+                "total_spots": len(all_spots),
+                "scored_count": len(result.scores),
             },
         )
-    
+
     return {
-        'scores_saved': len(scores_to_create),
-        'source': result.source,
-        'decimal_precision': 4,
+        "scores_saved": len(scores_to_create),
+        "source": result.source,
+        "decimal_precision": 4,
     }

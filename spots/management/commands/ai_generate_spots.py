@@ -13,7 +13,6 @@ from django.db import transaction
 
 from spots.models import Spot, Tag
 
-
 # プロバイダー設定
 AI_PROVIDER = os.environ.get("AI_PROVIDER", "lmstudio").lower()
 
@@ -218,7 +217,7 @@ def _preflight_server(base_url: str, model: str, api_key: str) -> None:
         raise CommandError(f"/models のJSON解析に失敗しました: {e}") from e
 
     ids = []
-    for item in (data.get("data") or []):
+    for item in data.get("data") or []:
         mid = item.get("id") or item.get("name")
         if mid:
             ids.append(str(mid))
@@ -299,17 +298,17 @@ class Command(BaseCommand):
             {"role": "system", "content": system_prompt},
             {
                 "role": "user",
-                "content": (
-                    "はじめてください。create_spot を合計回数分だけ呼び出してください。"
-                ),
+                "content": ("はじめてください。create_spot を合計回数分だけ呼び出してください。"),
             },
         ]
 
         created = 0
         round_idx = 0
-        self.stdout.write(self.style.NOTICE(
-            f"Requesting {AI_PROVIDER.upper()} model '{model}' at {base_url} to create {count} spot(s)..."
-        ))
+        self.stdout.write(
+            self.style.NOTICE(
+                f"Requesting {AI_PROVIDER.upper()} model '{model}' at {base_url} to create {count} spot(s)..."
+            )
+        )
 
         while created < count and round_idx < max_rounds:
             round_idx += 1
@@ -322,9 +321,7 @@ class Command(BaseCommand):
             }
 
             try:
-                resp = requests.post(
-                    chat_endpoint, headers=headers, json=payload, timeout=120
-                )
+                resp = requests.post(chat_endpoint, headers=headers, json=payload, timeout=120)
             except requests.exceptions.RequestException as e:
                 if AI_PROVIDER == "openrouter":
                     raise CommandError(
@@ -348,16 +345,20 @@ class Command(BaseCommand):
 
             if not tool_calls:
                 # ツール呼び出しが生成されなかった場合は追加指示で再試行
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        "ツール呼び出しがありません。create_spot のツールだけを使って続行してください。"
-                    ),
-                })
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": (
+                            "ツール呼び出しがありません。create_spot のツールだけを使って続行してください。"
+                        ),
+                    }
+                )
                 continue
 
             # 会話の整合性を保つため、tool_calls を含むアシスタント側メッセージを記録
-            messages.append(data["choices"][0]["message"])  # tool_calls を含むアシスタントメッセージ
+            messages.append(
+                data["choices"][0]["message"]
+            )  # tool_calls を含むアシスタントメッセージ
 
             # このアシスタントメッセージ内のツール呼び出しを順に実行
             for tc in tool_calls:
@@ -365,46 +366,60 @@ class Command(BaseCommand):
                     break
                 if tc.name != "create_spot":
                     # 未知のツール名は無視してエラー応答を返す
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "name": tc.name,
-                        "content": json.dumps({"error": "unknown tool"}, ensure_ascii=False),
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "name": tc.name,
+                            "content": json.dumps({"error": "unknown tool"}, ensure_ascii=False),
+                        }
+                    )
                     continue
 
                 try:
                     result = _create_spot_in_db(user, tc.arguments)
                     created += 1
-                    self.stdout.write(self.style.SUCCESS(
-                        f"[{created}/{count}] Created spot: {result.get('title')}"
-                    ))
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "name": "create_spot",
-                        "content": json.dumps({
-                            "status": "ok",
-                            "created": result,
-                        }, ensure_ascii=False),
-                    })
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"[{created}/{count}] Created spot: {result.get('title')}"
+                        )
+                    )
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "name": "create_spot",
+                            "content": json.dumps(
+                                {
+                                    "status": "ok",
+                                    "created": result,
+                                },
+                                ensure_ascii=False,
+                            ),
+                        }
+                    )
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Failed to create spot: {e}"))
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "name": "create_spot",
-                        "content": json.dumps({
-                            "status": "error",
-                            "message": str(e),
-                        }, ensure_ascii=False),
-                    })
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "name": "create_spot",
+                            "content": json.dumps(
+                                {
+                                    "status": "error",
+                                    "message": str(e),
+                                },
+                                ensure_ascii=False,
+                            ),
+                        }
+                    )
 
         if created < count:
             raise CommandError(
                 f"Requested {count} spot(s) but created {created}. Try increasing --max-rounds or adjusting your theme/model."
             )
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Done. Created {created} spot(s) as user '{username}'."
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(f"Done. Created {created} spot(s) as user '{username}'.")
+        )

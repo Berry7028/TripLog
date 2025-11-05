@@ -149,6 +149,10 @@ show_script_summary() {
     print_script_status "flow/generate_flow.py" "画面フロー図の生成"
     print_script_status "run_recommendation_jobs.sh" "AI閲覧分析バッチの実行"
     print_script_status "run_tests.sh" "Djangoテストスイートの実行"
+
+    print_header "コード品質ツール"
+    echo "   🎨 format                コードフォーマット (black + isort)"
+    echo "   🔍 lint                  コード品質チェック (flake8 + pylint)"
 }
 
 show_overview() {
@@ -249,6 +253,48 @@ run_migrations() {
     print_info "マイグレーションが完了しました"
 }
 
+run_format() {
+    print_header "コードフォーマットを実行します"
+    if ! run_manage_py format "$@"; then
+        print_error "フォーマットに失敗しました"
+        return 1
+    fi
+}
+
+run_lint() {
+    print_header "コード品質チェックを実行します"
+    if ! run_manage_py lint "$@"; then
+        print_error "lintチェックに失敗しました"
+        return 1
+    fi
+}
+
+run_format_interactive() {
+    local choice
+    read -r -p "チェックのみ実行しますか？(y/N): " choice
+    if [[ "$choice" =~ ^[Yy]$ ]]; then
+        run_format --check
+    else
+        run_format
+    fi
+}
+
+run_lint_interactive() {
+    local choice
+    read -r -p "使用するツール (1:flake8のみ, 2:pylintのみ, 3:両方) [3]: " choice
+    case "$choice" in
+        1)
+            run_lint --tool flake8
+            ;;
+        2)
+            run_lint --tool pylint
+            ;;
+        *)
+            run_lint --tool all
+            ;;
+    esac
+}
+
 # =========================
 # メニュー / CLI
 # =========================
@@ -267,6 +313,8 @@ show_menu() {
   7) requirements.txt インストール (pip install -r requirements.txt)
   8) マイグレーション実行 (makemigrations && migrate)
   9) AI閲覧分析バッチ実行 (run_recommendation_jobs.sh)
+  10) コードフォーマット実行 (black + isort)
+  11) コード品質チェック (flake8 + pylint)
   0) 終了
 MENU
         read -r -p "番号を入力 > " choice
@@ -299,12 +347,18 @@ MENU
             9)
                 run_recommendation_job
                 ;;
+            10)
+                run_format_interactive
+                ;;
+            11)
+                run_lint_interactive
+                ;;
             0)
                 print_info "終了します"
                 break
                 ;;
             *)
-                print_warning "0〜8の番号を入力してください"
+                print_warning "0〜11の番号を入力してください"
                 ;;
         esac
     done
@@ -325,6 +379,8 @@ command:
   install_requirements requirements.txt をインストール
   migrate     makemigrations && migrate を実行
   recommend [ARGS] run_recommendation_jobs.sh を実行
+  format [--check] [PATHS] コードをblack + isortでフォーマット
+  lint [--tool flake8|pylint|all] [PATHS] コード品質チェックを実行
   help        このメッセージを表示
 USAGE
 }
@@ -366,6 +422,12 @@ run_cli() {
             ;;
         recommend)
             bash "$SCRIPTS_DIR/run_recommendation_jobs.sh" "$@"
+            ;;
+        format)
+            run_format "$@"
+            ;;
+        lint)
+            run_lint "$@"
             ;;
         help|--help|-h)
             usage
