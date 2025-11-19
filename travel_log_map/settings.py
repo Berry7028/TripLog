@@ -179,14 +179,5 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.manusvm.computer',
 ]
 
-# OpenAI (AI レコメンド) 設定
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-OPENAI_RECOMMENDATION_MODEL = os.environ.get('OPENAI_RECOMMENDATION_MODEL', 'gpt-4o-mini')
-OPENAI_RECOMMENDATION_URL = os.environ.get(
-    'OPENAI_RECOMMENDATION_URL',
-    'https://api.openai.com/v1/chat/completions',
-)
-OPENAI_TIMEOUT = _env_int('OPENAI_TIMEOUT', 15)
-
 # iframe 埋め込みを許可（VS Code Simple Browser 対応）
 X_FRAME_OPTIONS = 'ALLOWALL'
