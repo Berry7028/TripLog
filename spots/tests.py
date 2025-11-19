@@ -139,7 +139,6 @@ class AdminDashboardTests(TestCase):
             longitude=135.0,
             address='大阪府',
             created_by=self.staff,
-            is_ai_generated=True,
         )
         spot.tags.add(tag)
         Review.objects.create(spot=spot, user=self.staff, rating=5, comment='最高！')
@@ -193,14 +192,12 @@ class AdminSpotCrudTests(TestCase):
                 'address': '長野県大町市',
                 'image_url': '',
                 'created_by': self.other_user.id,
-                'is_ai_generated': 'on',
                 'tags_text': 'カフェ, 山',
             },
         )
         self.assertEqual(response.status_code, 302)
         spot = Spot.objects.get(title='山頂カフェ')
         self.assertEqual(spot.created_by, self.other_user)
-        self.assertTrue(spot.is_ai_generated)
         self.assertSetEqual(set(spot.tags.values_list('name', flat=True)), {'カフェ', '山'})
 
     def test_non_staff_cannot_access_spot_admin(self):
@@ -517,27 +514,11 @@ class RecommendationServiceTests(TestCase):
         self.assertEqual(result.source, 'none')
         self.assertEqual([spot.id for spot in result.spots], [self.spot1.id, self.spot2.id])
 
-    def test_order_spots_by_relevance_fallback(self):
-        with patch('spots.services.analytics._request_scores_from_openai') as mock_request:
-            mock_request.return_value = {}
-            result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
-            mock_request.assert_called_once()
+    def test_order_spots_by_relevance_uses_fallback_scoring(self):
+        result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
 
         self.assertEqual(result.source, 'fallback')
         ordered_ids = [spot.id for spot in result.spots]
         self.assertEqual(ordered_ids[0], self.spot1.id)
         self.assertIn(self.spot2.id, ordered_ids[1:])
         self.assertEqual(result.scored_spot_ids, {self.spot1.id, self.spot2.id, self.spot3.id})
-
-    def test_order_spots_by_relevance_uses_api_scores_when_available(self):
-        with patch('spots.services.analytics._request_scores_from_openai') as mock_request:
-            mock_request.return_value = {
-                self.spot2.id: 92.0,
-                self.spot1.id: 75.0,
-            }
-            result = order_spots_by_relevance([self.spot1, self.spot2, self.spot3], self.user)
-
-        self.assertEqual(result.source, 'api')
-        ordered_ids = [spot.id for spot in result.spots]
-        self.assertEqual(ordered_ids[0], self.spot2.id)
-        self.assertEqual(ordered_ids[1], self.spot1.id)
