@@ -40,9 +40,6 @@ def home(request):
         'page_obj': page_obj,
         'search_query': result.search_query,
         'sort_mode': result.sort_mode,
-        'recommendation_source': result.recommendation_source,
-        'recommendation_notice': result.recommendation_notice,
-        'recommendation_scored_ids': result.recommendation_scored_ids,
     }
     return render(request, 'spots/home.html', context)
 

@@ -149,7 +149,7 @@ class UserProfileForm(forms.ModelForm):
 
 
 class SpotAdminForm(SpotForm):
-    """管理画面向けスポットフォーム（投稿者やAI生成フラグも編集可能）。"""
+    """管理画面向けスポットフォーム（投稿者も編集可能）。"""
 
     class Meta(SpotForm.Meta):
         fields = [
@@ -160,20 +160,17 @@ class SpotAdminForm(SpotForm):
             'address',
             'image',
             'image_url',
-            'is_ai_generated',
             'created_by',
         ]
         widgets = {
             **SpotForm.Meta.widgets,
             'created_by': forms.Select(attrs={'class': 'form-select'}),
-            'is_ai_generated': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['created_by'].queryset = User.objects.order_by('username')
         self.fields['created_by'].label = '投稿者'
-        self.fields['is_ai_generated'].label = 'AI生成'
 
 
 class ReviewAdminForm(forms.ModelForm):

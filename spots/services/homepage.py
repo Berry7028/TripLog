@@ -8,7 +8,7 @@ from typing import List
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, QuerySet
 
-from ..models import Spot, UserRecommendationScore
+from ..models import Spot
 
 ALLOWED_SORT_MODES = {"recent", "relevance"}
 DEFAULT_SORT_MODE = "recent"
@@ -85,44 +85,5 @@ def _apply_recommendation_order(
     spots: List[Spot],
     user,
 ) -> tuple[List[Spot], str | None, str | None, List[int]]:
-    if not spots:
-        return spots, None, None, []
-
-    if isinstance(user, AnonymousUser) or not getattr(user, "is_authenticated", False):
-        return spots, None, "おすすめ順を利用するにはログインしてください。", []
-
-    user_scores = list(
-        UserRecommendationScore.objects.filter(user=user, spot__in=spots)
-        .select_related("spot")
-    )
-    if not user_scores:
-        return (
-            spots,
-            None,
-            "おすすめスコアがまだ計算されていません。しばらくお待ちください。",
-            [],
-        )
-
-    score_map = {score.spot_id: score.score for score in user_scores}
-    source = user_scores[0].source if user_scores else None
-
-    scored_spots: List[Spot] = []
-    unscored_spots: List[Spot] = []
-
-    for spot in spots:
-        (scored_spots if spot.id in score_map else unscored_spots).append(spot)
-
-    scored_spots.sort(key=lambda spot: score_map.get(spot.id, 0), reverse=True)
-    sorted_spots = scored_spots + unscored_spots
-    recommendation_scored_ids = [spot.id for spot in scored_spots]
-    notice = _build_recommendation_notice(source)
-
-    return sorted_spots, source, notice, recommendation_scored_ids
-
-
-def _build_recommendation_notice(source: str | None) -> str:
-    if source == "api":
-        return "AIが分析したおすすめ順で表示しています。(beta)"
-    if source == "fallback":
-        return "閲覧履歴をもとに推定したおすすめ順です。"
-    return "おすすめ順で表示しています。"
+    """おすすめ順表示は削除済みのため、元のリストのまま返す。"""
+    return spots, None, None, []

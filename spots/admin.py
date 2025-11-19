@@ -1,16 +1,12 @@
-from django.contrib import admin, messages
+from django.contrib import admin
 
 from .models import (
-    RecommendationJobLog,
-    RecommendationJobSetting,
     Review,
     Spot,
     Tag,
     UserProfile,
-    UserRecommendationScore,
     UserSpotInteraction,
 )
-from .services import run_recommendation_for_user
 
 
 @admin.register(Spot)
@@ -67,67 +63,3 @@ class UserSpotInteractionAdmin(admin.ModelAdmin):
     list_display = ['user', 'spot', 'view_count', 'total_view_duration', 'last_viewed_at']
     list_filter = ['last_viewed_at']
     search_fields = ['user__username', 'spot__title']
-    actions = ['run_recommendation_analysis']
-
-    @admin.action(description='選択したユーザーの閲覧データをAIで解析')
-    def run_recommendation_analysis(self, request, queryset):
-        user_ids = set(queryset.values_list('user_id', flat=True))
-        if not user_ids:
-            self.message_user(request, 'ユーザーが選択されていません。', level=messages.WARNING)
-            return
-        if len(user_ids) > 1:
-            self.message_user(
-                request,
-                '複数ユーザーが選択されています。1ユーザーずつ実行してください。',
-                level=messages.ERROR,
-            )
-            return
-
-        user = queryset.first().user
-        result = run_recommendation_for_user(
-            user,
-            triggered_by=RecommendationJobLog.TRIGGER_ADMIN,
-            persist_log=True,
-        )
-        if result is None:
-            self.message_user(
-                request,
-                f'{user.username} の閲覧データが見つからないため解析をスキップしました。',
-                level=messages.WARNING,
-            )
-            return
-
-        message = (
-            f'{user.username} のおすすめ解析を実行しました。'
-            f' スコアリング対象: {len(result.scored_spot_ids)} 件 (source={result.source})'
-        )
-        self.message_user(request, message, level=messages.SUCCESS)
-
-
-@admin.register(RecommendationJobSetting)
-class RecommendationJobSettingAdmin(admin.ModelAdmin):
-    list_display = ['interval_hours', 'enabled', 'last_run_at', 'updated_at']
-    readonly_fields = ['created_at', 'updated_at']
-
-    def has_add_permission(self, request):
-        if RecommendationJobSetting.objects.exists():
-            return False
-        return super().has_add_permission(request)
-
-
-@admin.register(RecommendationJobLog)
-class RecommendationJobLogAdmin(admin.ModelAdmin):
-    list_display = ['user', 'source', 'triggered_by', 'executed_at', 'score_count']
-    list_filter = ['source', 'triggered_by', 'executed_at']
-    search_fields = ['user__username']
-    readonly_fields = ['user', 'source', 'triggered_by', 'executed_at', 'scored_spot_ids', 'metadata']
-    ordering = ['-executed_at']
-
-
-@admin.register(UserRecommendationScore)
-class UserRecommendationScoreAdmin(admin.ModelAdmin):
-    list_display = ['user', 'spot', 'score', 'source', 'updated_at']
-    list_filter = ['source', 'updated_at']
-    search_fields = ['user__username', 'spot__title']
-    readonly_fields = ['created_at', 'updated_at']
-    ordering = ['-score', '-updated_at']

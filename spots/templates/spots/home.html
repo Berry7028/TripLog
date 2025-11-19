@@ -15,15 +15,8 @@
                 <label for="sortMode" class="form-label mb-0" style="white-space:nowrap; font-weight:bold; font-size:1.05rem; color:#333;">並び順</label>
                 <select id="sortMode" name="sort" class="form-select" style="min-width:120px; border-radius:8px; border:1px solid #b0b0b0; font-size:1rem; padding:6px 16px; transition:border-color 0.2s; background:#fff;" onchange="this.form.submit()" onfocus="this.style.borderColor='#6B9080'" onblur="this.style.borderColor='#b0b0b0'">
                     <option value="recent" {% if sort_mode != 'relevance' %}selected{% endif %}>新着順</option>
-                    <option value="relevance" {% if sort_mode == 'relevance' %}selected{% endif %}>おすすめ順(β)</option>
                 </select>
             </form>
-
-            {% if recommendation_notice %}
-            <div class="alert alert-info mb-0 py-2 px-3 small">
-                <i class="fas fa-info-circle me-1"></i>{{ recommendation_notice }}
-            </div>
-            {% endif %}
         </div>
 
         {% if search_query %}
@@ -47,9 +40,6 @@
 
                     <div class="spot-info d-flex flex-column">
                         <h5 class="spot-title">{{ spot.title }}</h5>
-                        {% if sort_mode == 'relevance' and spot.id in recommendation_scored_ids %}
-                        <span class="badge bg-warning text-dark align-self-start mb-2">AIおすすめ</span>
-                        {% endif %}
                         <p class="spot-desc mb-2">{{ spot.description|truncatechars:70 }}</p>
                         {% if spot.tags.all %}
                         <div class="mb-2">

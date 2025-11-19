@@ -39,14 +39,6 @@
         <div class="metric-value">{{ views_last_week }}</div>
         <div class="metric-footer">SpotView ログ</div>
     </div>
-    <div class="metric-card">
-        <div class="metric-icon metric-icon--ai"><i class="fas fa-robot"></i></div>
-        <div class="metric-label">AIおすすめスコア</div>
-        <div class="metric-value">{{ ai_scores_count|default:0 }}</div>
-        <div class="metric-footer">
-            <a href="{% url 'admin_recommendation' %}" style="color: inherit; text-decoration: none;">管理画面へ →</a>
-        </div>
-    </div>
 </section>
 
 <section class="admin-panels">
@@ -88,7 +80,7 @@
     <div class="panel">
         <div class="panel-header">
             <h2><i class="fas fa-fire me-2"></i>注目スポット</h2>
-            <a href="{% url 'admin_spot_list' %}?ai=1" class="panel-link">AI生成を確認</a>
+            <a href="{% url 'admin_spot_list' %}" class="panel-link">一覧を見る</a>
         </div>
         <ul class="panel-list">
             {% for spot in top_spots %}
@@ -98,23 +90,6 @@
             </li>
             {% empty %}
             <li class="panel-empty">ランキング対象のスポットがありません。</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <div class="panel">
-        <div class="panel-header">
-            <h2><i class="fas fa-robot me-2"></i>AI生成スポット</h2>
-            <a href="{% url 'admin_spot_list' %}?ai=1" class="panel-link">すべて見る</a>
-        </div>
-        <ul class="panel-list">
-            {% for spot in ai_generated_spots %}
-            <li>
-                <span class="panel-title">{{ spot.title }}</span>
-                <span class="panel-meta"><span class="admin-badge admin-badge--ai"><i class="fas fa-robot"></i>AI生成</span> {{ spot.created_by.username }} / {{ spot.updated_at|date:'Y-m-d H:i' }}</span>
-            </li>
-            {% empty %}
-            <li class="panel-empty">AI生成のスポットはまだありません。</li>
             {% endfor %}
         </ul>
     </div>
