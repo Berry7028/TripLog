@@ -1,3 +1,10 @@
+"""
+Forms for the TripLog application.
+
+This module defines the forms used for creating and updating Spots, Reviews,
+UserProfiles, and various admin-specific forms for managing users and groups.
+"""
+
 from __future__ import annotations
 
 from django import forms
@@ -8,7 +15,21 @@ from .models import Spot, Review, UserProfile, Tag
 
 
 def _normalize_tags(tags_text: str) -> list[str]:
-    """カンマ区切りのタグ文字列を正規化し、一意なリストに変換する。"""
+    """
+    Normalizes a comma-separated string of tags into a unique list.
+
+    Splits the input string by commas, strips whitespace, and removes duplicates
+    and empty strings. Validates that each tag is within the character limit.
+
+    Args:
+        tags_text (str): The raw string of tags (e.g., "Sea, Mountain, View").
+
+    Returns:
+        list[str]: A list of unique tag names.
+
+    Raises:
+        forms.ValidationError: If any tag exceeds 50 characters.
+    """
     seen = set()
     tags: list[str] = []
     for raw in (tags_text or '').split(','):
@@ -24,8 +45,13 @@ def _normalize_tags(tags_text: str) -> list[str]:
 
 
 class SpotForm(forms.ModelForm):
-    """スポット投稿フォーム"""
-    # カンマ区切りでタグを入力（任意）
+    """
+    Form for creating or updating a Spot.
+
+    Includes a custom field `tags_text` to handle comma-separated tag input.
+    """
+
+    # Input for tags as a comma-separated string (optional)
     tags_text = forms.CharField(
         required=False,
         label='タグ',
@@ -74,6 +100,12 @@ class SpotForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """
+        Initializes the form.
+
+        If editing an existing instance, populates the `tags_text` field with
+        the currently associated tags.
+        """
         super().__init__(*args, **kwargs)
         instance: Spot | None = kwargs.get('instance')
         if instance and instance.pk:
@@ -81,6 +113,15 @@ class SpotForm(forms.ModelForm):
             self.fields['tags_text'].initial = ', '.join(current_tags)
 
     def clean_tags_text(self):
+        """
+        Validates the tags_text field.
+
+        Returns:
+            str: The cleaned tags text.
+
+        Raises:
+            forms.ValidationError: If validation fails in `_normalize_tags`.
+        """
         tags_text = self.cleaned_data.get('tags_text', '')
         try:
             _normalize_tags(tags_text)
@@ -89,6 +130,16 @@ class SpotForm(forms.ModelForm):
         return tags_text
 
     def save(self, commit=True, user=None):  # type: ignore[override]
+        """
+        Saves the form data to the database.
+
+        Args:
+            commit (bool): If True, save to the database immediately.
+            user (User, optional): The user creating the spot. Required for new spots.
+
+        Returns:
+            Spot: The saved spot instance.
+        """
         instance: Spot = super().save(commit=False)
         if user and not instance.pk:
             instance.created_by = user
@@ -100,18 +151,27 @@ class SpotForm(forms.ModelForm):
         return instance
 
     def save_m2m(self):  # type: ignore[override]
+        """
+        Saves the many-to-many relationships (tags).
+
+        Called automatically by Django when `save(commit=False)` is used followed by `form.save_m2m()`.
+        """
         if hasattr(self, '_pending_instance'):
             self._apply_tags(self._pending_instance)
             delattr(self, '_pending_instance')
 
     def _apply_tags(self, instance: Spot):
+        """
+        Helper method to process and associate tags with the spot instance.
+        """
         tags_text = self.cleaned_data.get('tags_text', '')
         tag_names = _normalize_tags(tags_text)
         tag_objs = [Tag.objects.get_or_create(name=name)[0] for name in tag_names]
         instance.tags.set(tag_objs)
 
+
 class ReviewForm(forms.ModelForm):
-    """レビュー投稿フォーム"""
+    """Form for users to submit a review for a spot."""
     
     class Meta:
         model = Review
@@ -130,7 +190,7 @@ class ReviewForm(forms.ModelForm):
 
 
 class UserProfileForm(forms.ModelForm):
-    """ユーザープロフィールフォーム"""
+    """Form for users to update their profile information."""
     
     class Meta:
         model = UserProfile
@@ -149,7 +209,11 @@ class UserProfileForm(forms.ModelForm):
 
 
 class SpotAdminForm(SpotForm):
-    """管理画面向けスポットフォーム（投稿者も編集可能）。"""
+    """
+    Admin-specific form for managing spots.
+
+    Allows editing the creator of the spot in addition to standard fields.
+    """
 
     class Meta(SpotForm.Meta):
         fields = [
@@ -174,7 +238,7 @@ class SpotAdminForm(SpotForm):
 
 
 class ReviewAdminForm(forms.ModelForm):
-    """管理画面向けレビュー編集フォーム"""
+    """Admin form for managing reviews."""
 
     class Meta:
         model = Review
@@ -191,7 +255,7 @@ class ReviewAdminForm(forms.ModelForm):
 
 
 class TagForm(forms.ModelForm):
-    """タグ管理フォーム"""
+    """Form for managing tags."""
 
     class Meta:
         model = Tag
@@ -202,7 +266,11 @@ class TagForm(forms.ModelForm):
 
 
 class UserAdminForm(forms.ModelForm):
-    """ユーザー管理フォーム"""
+    """
+    Admin form for updating existing users.
+
+    Filters privileged fields for non-superuser admins.
+    """
 
     privileged_fields = (
         'is_staff',
@@ -246,7 +314,7 @@ class UserAdminForm(forms.ModelForm):
 
 
 class UserProfileAdminForm(forms.ModelForm):
-    """ユーザープロフィール管理フォーム"""
+    """Admin form for managing user profiles."""
 
     class Meta:
         model = UserProfile
@@ -259,7 +327,12 @@ class UserProfileAdminForm(forms.ModelForm):
 
 
 class UserAdminCreateForm(UserCreationForm):
-    """管理画面向けのユーザー新規作成フォーム"""
+    """
+    Admin form for creating new users.
+
+    Extends the standard UserCreationForm to include admin-specific fields
+    and styling.
+    """
 
     email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={'class': 'form-control'}))
     is_active = forms.BooleanField(required=False, initial=True, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}), label='有効')
@@ -305,6 +378,9 @@ class UserAdminCreateForm(UserCreationForm):
             self.fields['user_permissions'].queryset = Permission.objects.order_by('content_type__app_label', 'codename')
 
     def save(self, commit=True):
+        """
+        Saves the new user with the extended fields.
+        """
         user: User = super().save(commit=False)
         user.email = self.cleaned_data.get('email', '')
         user.is_active = self.cleaned_data.get('is_active', True)
@@ -317,7 +393,7 @@ class UserAdminCreateForm(UserCreationForm):
 
 
 class GroupAdminForm(forms.ModelForm):
-    """グループ管理フォーム"""
+    """Admin form for managing groups."""
 
     class Meta:
         model = Group

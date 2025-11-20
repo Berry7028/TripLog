@@ -1,14 +1,29 @@
-"""ビューで利用するシリアライザ的ユーティリティ。"""
+"""
+Serializer utilities for converting Spot models to dictionary formats.
+
+These functions are used to prepare Spot data for JSON responses in views and APIs.
+"""
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Optional
 
 from ..models import Spot
 
 
 def serialize_spot_summary(spot: Spot) -> Dict[str, object]:
-    """一覧やAPIレスポンス向けのスポット情報。"""
+    """
+    Serializes a Spot object into a dictionary summary for lists or API responses.
+
+    Includes full details such as description, coordinates, image URL, creator,
+    creation date, and tags.
+
+    Args:
+        spot (Spot): The Spot instance to serialize.
+
+    Returns:
+        Dict[str, object]: A dictionary containing the spot's summary data.
+    """
 
     image_url = _resolve_image_url(spot)
     return {
@@ -26,7 +41,18 @@ def serialize_spot_summary(spot: Spot) -> Dict[str, object]:
 
 
 def serialize_spot_brief(spot: Spot) -> Dict[str, object]:
-    """検索候補などに使うコンパクトな表現。"""
+    """
+    Serializes a Spot object into a brief dictionary for search suggestions.
+
+    Includes only minimal details needed for identification and location:
+    ID, title, address, and coordinates.
+
+    Args:
+        spot (Spot): The Spot instance to serialize.
+
+    Returns:
+        Dict[str, object]: A dictionary containing brief spot data.
+    """
 
     return {
         "id": spot.id,
@@ -37,7 +63,19 @@ def serialize_spot_brief(spot: Spot) -> Dict[str, object]:
     }
 
 
-def _resolve_image_url(spot: Spot) -> str | None:
+def _resolve_image_url(spot: Spot) -> Optional[str]:
+    """
+    Resolves the image URL for a spot.
+
+    Prioritizes the uploaded image file URL. If that fails or doesn't exist,
+    falls back to the external image URL string.
+
+    Args:
+        spot (Spot): The Spot instance.
+
+    Returns:
+        Optional[str]: The resolved URL string, or None if no image is available.
+    """
     if spot.image:
         try:
             return spot.image.url

@@ -1,97 +1,114 @@
 # TripLog
 
-Render.com にデプロイされた Django ベースの旅行ログマッピングアプリケーションです。インタラクティブな地図を通じて旅先スポットを共有・発見できます。
+A Django-based travel log mapping application deployed on Render.com. Share and discover travel spots through an interactive map.
 
-## 機能
+## Purpose
 
-- 旅行スポットを探索できるインタラクティブマップ
-- ユーザー認証と旅行ログの共有機能
-- 本番デプロイ時の自動スーパーユーザー作成
-- デプロイ後セットアップの自動化
+TripLog allows users to document their travel experiences by pinning spots on a map, adding descriptions, images, and ratings. It provides a platform for users to share their journeys and discover new destinations recommended by others.
 
-## デプロイ設定
+## Features
 
-### 環境変数
+- **Interactive Map**: Explore travel spots visually on a map.
+- **User Authentication**: Secure signup, login, and profile management.
+- **Spot Management**: Create, edit, and delete travel spots with images and tags.
+- **Reviews**: Rate and review spots shared by other users.
+- **Favorites**: Save interesting spots to your personal list.
+- **Admin Dashboard**: Custom dashboard for staff to manage content and users.
+- **Automated Deployment**: Scripts for automatic setup and superuser creation on Render.com.
 
-Render.com で本番デプロイする際は、以下の環境変数を設定してください。
+## Setup for New Developers
 
-#### Django 用必須設定
-- `SECRET_KEY`: セキュリティのための Django シークレットキー
-- `DEBUG`: 本番環境では `false` に設定
-- `DATABASE_URL`: Render が自動で提供する PostgreSQL の接続 URL
+### Prerequisites
 
-#### スーパーユーザー自動作成
-デプロイ時に管理者アカウントを自動作成する場合は、以下の環境変数をセットします。
+- Python 3.9+
+- pip (Python package installer)
+- Git
 
-- `DJANGO_SUPERUSER_USERNAME`: 管理者ユーザー名（例: `admin`）
-- `DJANGO_SUPERUSER_EMAIL`: 管理者メールアドレス
-- `DJANGO_SUPERUSER_PASSWORD`: 管理者パスワード（例: `admin123`）
+### Local Development Setup
 
-### 自動デプロイ手順
+1.  **Clone the repository:**
 
-1. **データベース初期化**: `python manage.py migrate`
-2. **静的ファイル収集**: `python manage.py collectstatic --no-input`
-3. **デプロイ後処理**: `post_deploy.sh` を実行してスーパーユーザーを作成
-4. **サーバー起動**: Gunicorn サーバーを起動
+    ```bash
+    git clone https://github.com/Berry7028/TripLog.git
+    cd TripLog
+    ```
 
-### ファイル構成
+2.  **Create and activate a virtual environment:**
 
-```
-├── post_deploy.sh          # スーパーユーザー作成用のデプロイ後スクリプト
-├── start.sh                # デプロイ時のメイン起動スクリプト
-├── requirements.txt        # Python 依存パッケージ
-├── manage.py               # Django 管理コマンド
-├── travel_log_map/         # Django プロジェクト設定
-└── spots/                  # 旅行スポット用 Django アプリ
-```
+    ```bash
+    python -m venv venv
+    # Windows
+    venv\Scripts\activate
+    # macOS/Linux
+    source venv/bin/activate
+    ```
 
-### 手動デプロイ手順
+3.  **Install dependencies:**
 
-1. リポジトリをクローン
-2. 依存関係をインストール: `pip install -r requirements.txt`
-3. 環境変数を設定
-4. マイグレーション実行: `python manage.py migrate`
-5. スーパーユーザー作成: `python manage.py createsuperuser`
-6. 開発サーバー起動: `python manage.py runserver`
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-## 管理画面アクセス
+4.  **Set up the database:**
 
-デプロイ後、管理画面には以下からアクセスします。
-- **URL**: `https://your-domain.com/admin/`
-- **ユーザー名**: `DJANGO_SUPERUSER_USERNAME` で指定した値
-- **パスワード**: `DJANGO_SUPERUSER_PASSWORD` で指定した値
+    ```bash
+    python manage.py migrate
+    ```
 
-## 開発
+5.  **Create a superuser (admin):**
 
-### ローカルセットアップ
+    ```bash
+    python manage.py createsuperuser
+    ```
 
-```bash
-git clone https://github.com/Berry7028/TripLog.git
-cd TripLog
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
-```
+6.  **Run the development server:**
 
-### スクリプト
+    ```bash
+    python manage.py runserver
+    ```
 
-- `start.sh`: 本番環境向けの起動スクリプト(デプロイ後セットアップ込み)
-- `post_deploy.sh`: 環境変数を用いたスーパーユーザー自動作成スクリプト
-- 開発用スクリプトは `scripts/` ディレクトリを参照
+    Access the application at `http://127.0.0.1:8000/`.
 
-## 技術スタック
+### Usage
 
-- **バックエンド**: Django 5.2+
-- **データベース**: PostgreSQL（本番）、SQLite（開発）
-- **デプロイ**: Render.com
-- **アプリケーションサーバー**: Gunicorn
-- **静的ファイル**: WhiteNoise
+-   **Home**: View the list of recent spots.
+-   **Map**: Click "Map" to see spots plotted geographically.
+-   **Add Spot**: Log in and click "Post Spot" to share a new location.
+-   **Admin**: Access `http://127.0.0.1:8000/manage/` (custom dashboard) or `http://127.0.0.1:8000/admin/` (standard Django admin) using your superuser credentials.
 
-## コントリビューション
+## Deployment Configuration
 
-開発ガイドラインと利用可能なスクリプトについては `AGENTS.md` と `README_scripts.md` を参照してください。
+### Environment Variables
 
-## ライセンス
+When deploying to production (e.g., Render.com), set the following environment variables:
 
-本プロジェクトは非公開であり、一般公開用のライセンスは付与していません。
+#### Required Django Settings
+-   `SECRET_KEY`: A random string for cryptographic signing.
+-   `DEBUG`: Set to `false` in production.
+-   `DATABASE_URL`: Connection string for the PostgreSQL database.
+
+#### Automatic Superuser Creation
+To automatically create an admin account upon deployment:
+
+-   `DJANGO_SUPERUSER_USERNAME`: Admin username (e.g., `admin`)
+-   `DJANGO_SUPERUSER_EMAIL`: Admin email
+-   `DJANGO_SUPERUSER_PASSWORD`: Admin password
+
+### Deployment Files
+
+-   `post_deploy.sh`: Runs after deployment to apply migrations and create a superuser.
+-   `start.sh`: Main entry point script for starting the Gunicorn server.
+-   `travel_log_map/`: Project configuration directory.
+-   `spots/`: Main application directory.
+
+## Tech Stack
+
+-   **Backend**: Django 5.2+
+-   **Database**: PostgreSQL (Production), SQLite (Development)
+-   **Deployment**: Render.com
+-   **Server**: Gunicorn
+-   **Static Files**: WhiteNoise
+
+## License
+
+This project is private and does not grant a license for public use.

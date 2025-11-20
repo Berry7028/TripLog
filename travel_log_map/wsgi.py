@@ -2,6 +2,7 @@
 WSGI config for travel_log_map project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
+This is the entry point for WSGI-compatible web servers (like Gunicorn) to serve the project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/

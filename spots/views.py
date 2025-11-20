@@ -1,3 +1,10 @@
+"""
+Views for the TripLog application.
+
+This module handles the HTTP requests and returns responses for the web interface,
+including pages for home, spot details, user profile, and various API endpoints.
+"""
+
 from datetime import timedelta
 
 from django.contrib import messages
@@ -6,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
-from django.http import JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -24,15 +31,26 @@ from .services.interactions import (
 from .services.serializers import serialize_spot_brief, serialize_spot_summary
 
 
-def home(request):
-    """ホームページ - スポット一覧"""
+def home(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the homepage with a list of spots.
+
+    Handles search queries and sorting parameters from the request.
+    Displays a paginated list of spots (12 per page).
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The rendered homepage template.
+    """
     result = fetch_homepage_spots(
         user=request.user,
         search_query=request.GET.get('search', ''),
         sort_mode=request.GET.get('sort', 'recent'),
     )
 
-    paginator = Paginator(result.spots, 12)  # 1ページに12件表示
+    paginator = Paginator(result.spots, 12)  # 12 items per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -44,25 +62,40 @@ def home(request):
     return render(request, 'spots/home.html', context)
 
 
-def spot_detail(request, spot_id):
-    """スポット詳細ページ"""
+def spot_detail(request: HttpRequest, spot_id: int) -> HttpResponse:
+    """
+    Renders the detailed view for a specific spot.
+
+    - Logs the view event.
+    - Calculates average rating.
+    - Determines if the user has favorited the spot.
+    - Fetches related spots by the same author.
+    - Handles the display of the review form if the user hasn't reviewed yet.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+        spot_id (int): The primary key of the spot to display.
+
+    Returns:
+        HttpResponse: The rendered spot detail template.
+    """
     spot = get_object_or_404(Spot, id=spot_id)
     if request.method == 'GET':
         log_spot_view(spot, request.user)
     reviews = spot.reviews.all().select_related('user')
 
-    # 平均評価を計算
+    # Calculate average rating
     avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
 
-    # シェアURL（絶対URL）
+    # Absolute URL for sharing
     share_url = request.build_absolute_uri(spot.get_absolute_url())
 
     review_form = _build_review_form(request.user, reviews)
 
-    # お気に入り状態を判定
+    # Check favorite status
     is_favorite = is_favorite_spot(spot, request.user)
 
-    # 関連スポット（同じユーザーの投稿） - 現在のスポットを除いた最新5件のみ渡す
+    # Related spots (same author) - excluding current spot, latest 5
     related_spots = fetch_related_spots(spot)
 
     context = {
@@ -80,8 +113,19 @@ def spot_detail(request, spot_id):
 
 @login_required
 @require_POST
-def record_spot_view(request, spot_id):
-    """スポット閲覧の滞在時間を記録"""
+def record_spot_view(request: HttpRequest, spot_id: int) -> JsonResponse:
+    """
+    API endpoint to record the duration a user spent viewing a spot.
+
+    Expected to be called via AJAX when a user leaves the page.
+
+    Args:
+        request (HttpRequest): The HTTP request object (POST only).
+        spot_id (int): The ID of the spot.
+
+    Returns:
+        JsonResponse: A JSON response indicating success.
+    """
 
     spot = get_object_or_404(Spot, id=spot_id)
     duration_ms = _safe_float(request.POST.get('duration_ms', 0))
@@ -90,10 +134,18 @@ def record_spot_view(request, spot_id):
     return JsonResponse({'success': True})
 
 
-def ranking(request):
-    """直近7日間の閲覧数ランキング"""
+def ranking(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the ranking page showing the most viewed spots in the last 7 days.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The rendered ranking template.
+    """
     week_ago = timezone.now() - timedelta(days=7)
-    # 直近7日の閲覧数で集計し、上位順にソート
+    # Aggregate by views in the last 7 days and sort descending
     ranked_spots = (
         Spot.objects.all()
         .annotate(weekly_views=Count('spot_views', filter=Q(spot_views__viewed_at__gte=week_ago)))
@@ -103,15 +155,23 @@ def ranking(request):
         .order_by('-weekly_views', '-created_at')
     )
     context = {
-        'ranked_spots': ranked_spots[:7],  # トップ7のみ表示
+        'ranked_spots': ranked_spots[:7],  # Top 7 only
         'week_ago': week_ago,
     }
     return render(request, 'spots/ranking.html', context)
 
 
 @login_required
-def add_spot(request):
-    """スポット投稿ページ"""
+def add_spot(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the page to create a new spot and handles form submission.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The add spot form or a redirect to the new spot's detail page.
+    """
     if request.method == 'POST':
         form = SpotForm(request.POST, request.FILES)
         if form.is_valid():
@@ -125,14 +185,23 @@ def add_spot(request):
 
 
 @login_required
-def add_review(request, spot_id):
-    """レビュー投稿"""
+def add_review(request: HttpRequest, spot_id: int) -> HttpResponse:
+    """
+    Handles the submission of a new review for a spot.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+        spot_id (int): The ID of the spot being reviewed.
+
+    Returns:
+        HttpResponse: A redirect to the spot detail page.
+    """
     spot = get_object_or_404(Spot, id=spot_id)
     
     if request.method == 'POST':
         form = ReviewForm(request.POST)
         if form.is_valid():
-            # 既存のレビューをチェック
+            # Check for existing review
             existing_review = Review.objects.filter(spot=spot, user=request.user).first()
             if existing_review:
                 messages.error(request, 'このスポットには既にレビューを投稿しています。')
@@ -147,11 +216,19 @@ def add_review(request, spot_id):
 
 
 @login_required
-def my_spots(request):
-    """マイページ - 自分の投稿一覧"""
+def my_spots(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the 'My Spots' page, listing spots created by the current user.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The rendered my spots template.
+    """
     spots = Spot.objects.filter(created_by=request.user)
     
-    # ページネーション
+    # Pagination
     paginator = Paginator(spots, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -160,8 +237,16 @@ def my_spots(request):
 
 
 @login_required
-def profile(request):
-    """プロフィールページ"""
+def profile(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the user profile page and handles profile updates.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The rendered profile template.
+    """
     profile, created = UserProfile.objects.get_or_create(user=request.user)
     
     if request.method == 'POST':
@@ -180,15 +265,26 @@ def profile(request):
     return render(request, 'spots/profile.html', context)
 
 
-def register(request):
-    """ユーザー登録"""
+def register(request: HttpRequest) -> HttpResponse:
+    """
+    Handles user registration.
+
+    Displays the registration form and processes the creation of new user accounts.
+    Logs the user in automatically upon successful registration.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The registration page or a redirect to home upon success.
+    """
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             username = form.cleaned_data.get('username')
             messages.success(request, f'{username}さん、アカウントが作成されました！')
-            # 自動ログイン
+            # Auto login
             user = authenticate(username=username, password=form.cleaned_data.get('password1'))
             if user:
                 login(request, user)
@@ -199,8 +295,16 @@ def register(request):
     return render(request, 'registration/register.html', {'form': form})
 
 
-def search_spots_api(request):
-    """スポット検索API（Ajax用）"""
+def search_spots_api(request: HttpRequest) -> JsonResponse:
+    """
+    API endpoint for searching spots (used for autocomplete/suggestions).
+
+    Args:
+        request (HttpRequest): The HTTP request object. Query param 'q' contains the search term.
+
+    Returns:
+        JsonResponse: A list of matching spots (max 10).
+    """
     query = request.GET.get('q', '')
     if query:
         spots = Spot.objects.filter(
@@ -208,7 +312,7 @@ def search_spots_api(request):
             Q(description__icontains=query) |
             Q(address__icontains=query) |
             Q(tags__name__icontains=query)
-        ).distinct()[:10]  # 最大10件
+        ).distinct()[:10]  # Max 10 items
 
         results = [serialize_spot_brief(spot) for spot in spots]
 
@@ -217,8 +321,18 @@ def search_spots_api(request):
     return JsonResponse({'results': []})
 
 
-def map_view(request):
-    """マップページ"""
+def map_view(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the main map view.
+
+    Passes the 10 most recent spots to the template for initial display.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The rendered map template.
+    """
     recent_spots = Spot.objects.all().select_related('created_by')[:10]
     
     context = {
@@ -227,8 +341,18 @@ def map_view(request):
     return render(request, 'spots/map.html', context)
 
 
-def spots_api(request):
-    """スポット一覧API"""
+def spots_api(request: HttpRequest) -> JsonResponse:
+    """
+    API endpoint to retrieve a list of spots.
+
+    Supports filtering by 'mine' (current user's spots) or 'others' (other users' spots).
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        JsonResponse: A dictionary containing the list of spots.
+    """
     spots = (
         Spot.objects.all()
         .select_related('created_by')
@@ -247,8 +371,18 @@ def spots_api(request):
     return JsonResponse({'spots': spots_data})
 
 
-def logout_view(request):
-    """ログアウト（GET許可）してリダイレクト"""
+def logout_view(request: HttpRequest) -> HttpResponse:
+    """
+    Logs out the user and redirects to the configured URL or homepage.
+
+    Allows GET requests for logout (unlike standard Django which prefers POST).
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: A redirect response.
+    """
     logout(request)
     try:
         from django.conf import settings
@@ -259,8 +393,16 @@ def logout_view(request):
 
 
 @login_required
-def add_spot_api(request):
-    """スポット追加API"""
+def add_spot_api(request: HttpRequest) -> JsonResponse:
+    """
+    API endpoint to create a new spot.
+
+    Args:
+        request (HttpRequest): The HTTP request object (POST only).
+
+    Returns:
+        JsonResponse: Success status and the created spot data, or error details.
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です。'}, status=405)
 
@@ -276,8 +418,17 @@ def add_spot_api(request):
 
 
 @login_required
-def toggle_favorite(request, spot_id):
-    """スポットのお気に入りをトグル"""
+def toggle_favorite(request: HttpRequest, spot_id: int) -> HttpResponse:
+    """
+    Toggles the favorite status of a spot for the current user.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+        spot_id (int): The ID of the spot to toggle.
+
+    Returns:
+        HttpResponse: A redirect back to the spot detail page.
+    """
     spot = get_object_or_404(Spot, id=spot_id)
     if request.method == 'POST':
         is_now_favorite = toggle_favorite_spot(spot, request.user)
@@ -288,12 +439,27 @@ def toggle_favorite(request, spot_id):
     return redirect('spot_detail', spot_id=spot.id)
 
 
-def plan_view(request):
-    """プランページ - iframeで外部サイトを表示"""
+def plan_view(request: HttpRequest) -> HttpResponse:
+    """
+    Renders the plan page (currently a placeholder embedding an external site via iframe).
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+
+    Returns:
+        HttpResponse: The rendered plan template.
+    """
     return render(request, 'spots/plan.html')
 
 
 def _build_review_form(user, reviews):
+    """
+    Helper to determine if a review form should be displayed.
+
+    Returns:
+        ReviewForm: An instance of ReviewForm if the user can review.
+        None: If the user is anonymous or has already reviewed.
+    """
     if not getattr(user, 'is_authenticated', False):
         return None
     if reviews.filter(user=user).exists():
@@ -302,6 +468,15 @@ def _build_review_form(user, reviews):
 
 
 def _safe_float(raw_value) -> float:
+    """
+    Safely converts a value to float.
+
+    Args:
+        raw_value: The value to convert.
+
+    Returns:
+        float: The converted float, or 0.0 if conversion fails.
+    """
     try:
         return float(raw_value)
     except (TypeError, ValueError):
@@ -309,6 +484,15 @@ def _safe_float(raw_value) -> float:
 
 
 def _extract_first_error_message(form: SpotForm) -> str:
+    """
+    Extracts the first available error message from a form.
+
+    Args:
+        form (SpotForm): The form with errors.
+
+    Returns:
+        str: The error message string.
+    """
     errors = form.errors
     if hasattr(errors, 'items'):
         for _field, messages in errors.items():

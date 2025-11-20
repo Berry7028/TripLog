@@ -1,4 +1,10 @@
-"""スタッフ向けのカスタム管理ダッシュボード用ビュー群。"""
+"""
+Custom admin dashboard views for staff users.
+
+This module provides a set of views for a custom administrative interface,
+allowing staff members to manage spots, users, reviews, and groups without
+relying solely on the default Django Admin site.
+"""
 from __future__ import annotations
 
 from datetime import timedelta
@@ -10,6 +16,7 @@ from django.contrib.auth.forms import AdminPasswordChangeForm
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import Group, Permission, User
 from django.db.models import Avg, Count, Q
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -35,14 +42,31 @@ from .models import Review, Spot, SpotView, Tag, UserProfile
 
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """is_staffユーザーのみ許可するMixin"""
+    """
+    Mixin to restrict view access to staff users only.
+
+    Redirects non-staff users to the home page or login page.
+    """
 
     login_url = 'login'
 
     def test_func(self) -> bool:
+        """
+        Checks if the current user has staff privileges.
+
+        Returns:
+            bool: True if user is staff, False otherwise.
+        """
         return self.request.user.is_staff
 
     def handle_no_permission(self):
+        """
+        Handles requests from users without permission.
+
+        Returns:
+            HttpResponse: Redirect to home with an error message for authenticated users,
+                          or redirects to login for anonymous users.
+        """
         if self.request.user.is_authenticated:
             messages.error(self.request, '管理者権限が必要です。')
             return redirect('home')
@@ -50,14 +74,31 @@ class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 
 
 class AdminPermissionRequiredMixin(StaffRequiredMixin):
-    """スタッフの中でも特定の権限を要求するMixin"""
+    """
+    Mixin to require specific permissions for staff users.
+
+    Extends StaffRequiredMixin to also check for specific Django permissions.
+    Superusers are automatically granted access.
+    """
 
     required_permissions: tuple[str, ...] = ()
 
     def get_required_permissions(self) -> tuple[str, ...]:
+        """
+        Returns the list of required permissions.
+
+        Returns:
+            tuple[str, ...]: Tuple of permission strings (e.g., 'auth.view_user').
+        """
         return self.required_permissions
 
     def test_func(self) -> bool:
+        """
+        Checks if the user is staff and has all required permissions.
+
+        Returns:
+            bool: True if access is granted, False otherwise.
+        """
         if not super().test_func():
             return False
         user = self.request.user
@@ -70,11 +111,22 @@ class AdminPermissionRequiredMixin(StaffRequiredMixin):
 
 
 class AdminDashboardView(StaffRequiredMixin, TemplateView):
-    """管理ダッシュボードトップ"""
+    """
+    Renders the main admin dashboard.
+
+    Displays key metrics such as total counts of spots, reviews, users, and tags,
+    as well as recent activity and top-ranking content.
+    """
 
     template_name = 'spots/admin/dashboard.html'
 
     def get_context_data(self, **kwargs):
+        """
+        Populates the context with dashboard statistics.
+
+        Returns:
+            dict: Context data including various counts and querysets for the dashboard.
+        """
         context = super().get_context_data(**kwargs)
         now = timezone.now()
         week_ago = now - timedelta(days=7)
@@ -111,6 +163,11 @@ class AdminDashboardView(StaffRequiredMixin, TemplateView):
 
 
 class SpotAdminListView(StaffRequiredMixin, ListView):
+    """
+    Displays a paginated list of spots for administration.
+
+    Supports filtering by search query, tag, and creator.
+    """
     template_name = 'spots/admin/spot_list.html'
     model = Spot
     context_object_name = 'spots'
@@ -118,6 +175,15 @@ class SpotAdminListView(StaffRequiredMixin, ListView):
     ordering = ['-created_at']
 
     def get_queryset(self):
+        """
+        Constructs the queryset for the spot list.
+
+        Applies filters based on GET parameters and annotates with review counts
+        and weekly view statistics.
+
+        Returns:
+            QuerySet: Filtered and ordered list of spots.
+        """
         week_ago = timezone.now() - timedelta(days=7)
         queryset = (
             Spot.objects.select_related('created_by')
@@ -148,6 +214,12 @@ class SpotAdminListView(StaffRequiredMixin, ListView):
         return queryset.order_by('-created_at')
 
     def get_context_data(self, **kwargs):
+        """
+        Adds filter options (tags, creators) to the context.
+
+        Returns:
+            dict: Context data with filter options and current filter state.
+        """
         context = super().get_context_data(**kwargs)
         context.update(
             {
@@ -162,48 +234,105 @@ class SpotAdminListView(StaffRequiredMixin, ListView):
 
 
 class SpotAdminCreateView(StaffRequiredMixin, CreateView):
+    """
+    View for creating a new spot via the admin interface.
+    """
     model = Spot
     form_class = SpotAdminForm
     template_name = 'spots/admin/spot_form.html'
     success_url = reverse_lazy('admin_spot_list')
 
     def form_valid(self, form):
+        """
+        Handles successful form submission.
+
+        Args:
+            form (SpotAdminForm): The valid form.
+
+        Returns:
+            HttpResponse: Redirect to success URL with success message.
+        """
         response = super().form_valid(form)
         messages.success(self.request, 'スポットを作成しました。')
         return response
 
     def form_invalid(self, form):
+        """
+        Handles invalid form submission.
+
+        Args:
+            form (SpotAdminForm): The invalid form.
+
+        Returns:
+            HttpResponse: Re-renders the form with error messages.
+        """
         messages.error(self.request, '入力内容を確認してください。')
         return super().form_invalid(form)
 
 
 class SpotAdminUpdateView(StaffRequiredMixin, UpdateView):
+    """
+    View for updating an existing spot via the admin interface.
+    """
     model = Spot
     form_class = SpotAdminForm
     template_name = 'spots/admin/spot_form.html'
     success_url = reverse_lazy('admin_spot_list')
 
     def form_valid(self, form):
+        """
+        Handles successful form submission.
+
+        Args:
+            form (SpotAdminForm): The valid form.
+
+        Returns:
+            HttpResponse: Redirect to success URL with success message.
+        """
         response = super().form_valid(form)
         messages.success(self.request, 'スポットを更新しました。')
         return response
 
     def form_invalid(self, form):
+        """
+        Handles invalid form submission.
+
+        Args:
+            form (SpotAdminForm): The invalid form.
+
+        Returns:
+            HttpResponse: Re-renders the form with error messages.
+        """
         messages.error(self.request, '入力内容を確認してください。')
         return super().form_invalid(form)
 
 
 class SpotAdminDeleteView(StaffRequiredMixin, DeleteView):
+    """
+    View for deleting a spot via the admin interface.
+    """
     model = Spot
     template_name = 'spots/admin/spot_confirm_delete.html'
     success_url = reverse_lazy('admin_spot_list')
 
     def delete(self, request, *args, **kwargs):
+        """
+        Executes the deletion and displays a success message.
+
+        Args:
+            request (HttpRequest): The HTTP request.
+
+        Returns:
+            HttpResponse: Redirect to success URL.
+        """
         messages.success(request, 'スポットを削除しました。')
         return super().delete(request, *args, **kwargs)
 
 
 class TagAdminListView(StaffRequiredMixin, ListView):
+    """
+    Displays a list of tags for administration.
+    """
     template_name = 'spots/admin/tag_list.html'
     model = Tag
     context_object_name = 'tags'
@@ -211,6 +340,14 @@ class TagAdminListView(StaffRequiredMixin, ListView):
     ordering = ['name']
 
     def get_queryset(self):
+        """
+        Returns a queryset of tags, filtered by search query.
+
+        Annotates each tag with the count of associated spots.
+
+        Returns:
+            QuerySet: Filtered tag list.
+        """
         queryset = Tag.objects.annotate(spot_count=Count('spots', distinct=True))
         search = self.request.GET.get('q', '').strip()
         if search:
@@ -218,12 +355,19 @@ class TagAdminListView(StaffRequiredMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """
+        Adds the search query to the context.
+
+        Returns:
+            dict: Context data.
+        """
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '').strip()
         return context
 
 
 class TagAdminCreateView(StaffRequiredMixin, CreateView):
+    """View for creating a new tag."""
     model = Tag
     form_class = TagForm
     template_name = 'spots/admin/tag_form.html'
@@ -239,6 +383,7 @@ class TagAdminCreateView(StaffRequiredMixin, CreateView):
 
 
 class TagAdminUpdateView(StaffRequiredMixin, UpdateView):
+    """View for updating an existing tag."""
     model = Tag
     form_class = TagForm
     template_name = 'spots/admin/tag_form.html'
@@ -254,6 +399,7 @@ class TagAdminUpdateView(StaffRequiredMixin, UpdateView):
 
 
 class TagAdminDeleteView(StaffRequiredMixin, DeleteView):
+    """View for deleting a tag."""
     model = Tag
     template_name = 'spots/admin/tag_confirm_delete.html'
     success_url = reverse_lazy('admin_tag_list')
@@ -264,6 +410,9 @@ class TagAdminDeleteView(StaffRequiredMixin, DeleteView):
 
 
 class ReviewAdminListView(StaffRequiredMixin, ListView):
+    """
+    Displays a list of reviews for administration.
+    """
     template_name = 'spots/admin/review_list.html'
     model = Review
     context_object_name = 'reviews'
@@ -271,6 +420,14 @@ class ReviewAdminListView(StaffRequiredMixin, ListView):
     ordering = ['-created_at']
 
     def get_queryset(self):
+        """
+        Returns a filtered list of reviews.
+
+        Filters by search query (spot title, username, comment) and rating.
+
+        Returns:
+            QuerySet: Filtered review list.
+        """
         queryset = Review.objects.select_related('spot', 'user').order_by('-created_at')
         search = self.request.GET.get('q', '').strip()
         if search:
@@ -295,6 +452,15 @@ class ReviewAdminListView(StaffRequiredMixin, ListView):
         return context
 
     def post(self, request, *args, **kwargs):
+        """
+        Handles bulk actions (e.g., deleting selected reviews).
+
+        Args:
+            request (HttpRequest): The HTTP request.
+
+        Returns:
+            HttpResponse: Redirect to the review list.
+        """
         action = request.POST.get('action')
         selected_ids = request.POST.getlist('selected')
         if action == 'delete_selected' and selected_ids:
@@ -306,6 +472,7 @@ class ReviewAdminListView(StaffRequiredMixin, ListView):
 
 
 class ReviewAdminUpdateView(StaffRequiredMixin, UpdateView):
+    """View for updating a review."""
     model = Review
     form_class = ReviewAdminForm
     template_name = 'spots/admin/review_form.html'
@@ -321,6 +488,7 @@ class ReviewAdminUpdateView(StaffRequiredMixin, UpdateView):
 
 
 class ReviewAdminCreateView(StaffRequiredMixin, CreateView):
+    """View for creating a review."""
     model = Review
     form_class = ReviewAdminForm
     template_name = 'spots/admin/review_form.html'
@@ -336,6 +504,7 @@ class ReviewAdminCreateView(StaffRequiredMixin, CreateView):
 
 
 class ReviewAdminDeleteView(StaffRequiredMixin, DeleteView):
+    """View for deleting a review."""
     model = Review
     template_name = 'spots/admin/review_confirm_delete.html'
     success_url = reverse_lazy('admin_review_list')
@@ -346,6 +515,11 @@ class ReviewAdminDeleteView(StaffRequiredMixin, DeleteView):
 
 
 class UserAdminListView(AdminPermissionRequiredMixin, ListView):
+    """
+    Displays a list of users for administration.
+
+    Requires specific permissions (auth.view_user) to access.
+    """
     template_name = 'spots/admin/user_list.html'
     model = User
     context_object_name = 'users'
@@ -354,6 +528,14 @@ class UserAdminListView(AdminPermissionRequiredMixin, ListView):
     required_permissions = ('auth.view_user',)
 
     def get_queryset(self):
+        """
+        Returns a filtered list of users.
+
+        Filters by search query, staff status, and active status.
+
+        Returns:
+            QuerySet: Filtered user list.
+        """
         queryset = User.objects.all()
         search = self.request.GET.get('q', '').strip()
         if search:
@@ -388,6 +570,11 @@ class UserAdminListView(AdminPermissionRequiredMixin, ListView):
 
 
 class UserAdminCreateView(AdminPermissionRequiredMixin, CreateView):
+    """
+    View for creating a new user.
+
+    Requires 'auth.add_user' permission.
+    """
     model = User
     form_class = UserAdminCreateForm
     template_name = 'spots/admin/user_form.html'
@@ -409,18 +596,35 @@ class UserAdminCreateView(AdminPermissionRequiredMixin, CreateView):
 
 
 class UserAdminDetailView(AdminPermissionRequiredMixin, TemplateView):
+    """
+    View for displaying and editing user details and their profile.
+
+    Requires 'auth.view_user' to view and 'auth.change_user' to edit.
+    """
     template_name = 'spots/admin/user_detail.html'
 
     def get_required_permissions(self) -> tuple[str, ...]:
+        """
+        Dynamically sets required permissions based on request method.
+
+        Returns:
+            tuple[str, ...]: Permission strings.
+        """
         if self.request.method.upper() == 'POST':
             return ('auth.change_user',)
         return ('auth.view_user',)
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Loads the target user object before processing the request.
+        """
         self.user_obj = get_object_or_404(User, pk=kwargs['pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
+        """
+        Populates context with user data, forms, and recent activity.
+        """
         context = super().get_context_data(**kwargs)
         profile, _ = UserProfile.objects.get_or_create(user=self.user_obj)
         context.update(
@@ -439,6 +643,15 @@ class UserAdminDetailView(AdminPermissionRequiredMixin, TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        """
+        Handles updating the user and their profile.
+
+        Args:
+            request (HttpRequest): The HTTP request.
+
+        Returns:
+            HttpResponse: Redirect to the same page on success, or re-render with errors.
+        """
         profile, _ = UserProfile.objects.get_or_create(user=self.user_obj)
         user_form = UserAdminForm(
             request.POST,
@@ -457,6 +670,11 @@ class UserAdminDetailView(AdminPermissionRequiredMixin, TemplateView):
 
 
 class UserAdminPasswordChangeView(AdminPermissionRequiredMixin, FormView):
+    """
+    View for changing a user's password.
+
+    Requires 'auth.change_user' permission.
+    """
     template_name = 'spots/admin/user_password.html'
     form_class = AdminPasswordChangeForm
     required_permissions = ('auth.change_user',)
@@ -487,6 +705,7 @@ class UserAdminPasswordChangeView(AdminPermissionRequiredMixin, FormView):
 
 
 class GroupAdminListView(StaffRequiredMixin, ListView):
+    """Displays a list of user groups."""
     template_name = 'spots/admin/group_list.html'
     model = Group
     context_object_name = 'groups'
@@ -507,6 +726,7 @@ class GroupAdminListView(StaffRequiredMixin, ListView):
 
 
 class GroupAdminCreateView(StaffRequiredMixin, CreateView):
+    """View for creating a new group."""
     model = Group
     form_class = GroupAdminForm
     template_name = 'spots/admin/group_form.html'
@@ -522,6 +742,7 @@ class GroupAdminCreateView(StaffRequiredMixin, CreateView):
 
 
 class GroupAdminUpdateView(StaffRequiredMixin, UpdateView):
+    """View for updating an existing group."""
     model = Group
     form_class = GroupAdminForm
     template_name = 'spots/admin/group_form.html'
@@ -537,6 +758,7 @@ class GroupAdminUpdateView(StaffRequiredMixin, UpdateView):
 
 
 class GroupAdminDeleteView(StaffRequiredMixin, DeleteView):
+    """View for deleting a group."""
     model = Group
     template_name = 'spots/admin/group_confirm_delete.html'
     success_url = reverse_lazy('admin_group_list')
@@ -547,6 +769,9 @@ class GroupAdminDeleteView(StaffRequiredMixin, DeleteView):
 
 
 class UserProfileAdminListView(StaffRequiredMixin, ListView):
+    """
+    Displays a list of user profiles.
+    """
     template_name = 'spots/admin/profile_list.html'
     model = UserProfile
     context_object_name = 'profiles'
@@ -554,6 +779,14 @@ class UserProfileAdminListView(StaffRequiredMixin, ListView):
     ordering = ['user__username']
 
     def get_queryset(self):
+        """
+        Returns a filtered list of user profiles.
+
+        Filters by search query across username, bio, and favorite spot titles.
+
+        Returns:
+            QuerySet: Filtered profile list.
+        """
         queryset = UserProfile.objects.select_related('user').prefetch_related('favorite_spots')
         search = self.request.GET.get('q', '').strip()
         if search:
@@ -571,6 +804,9 @@ class UserProfileAdminListView(StaffRequiredMixin, ListView):
 
 
 class SpotViewAdminListView(StaffRequiredMixin, ListView):
+    """
+    Displays a list of spot view logs.
+    """
     template_name = 'spots/admin/spotview_list.html'
     model = SpotView
     context_object_name = 'logs'
@@ -578,6 +814,14 @@ class SpotViewAdminListView(StaffRequiredMixin, ListView):
     ordering = ['-viewed_at']
 
     def get_queryset(self):
+        """
+        Returns a filtered list of spot view logs.
+
+        Filters by spot ID and date range.
+
+        Returns:
+            QuerySet: Filtered log list.
+        """
         queryset = SpotView.objects.select_related('spot').order_by('-viewed_at')
         spot_id = self.request.GET.get('spot')
         if spot_id:
@@ -591,6 +835,12 @@ class SpotViewAdminListView(StaffRequiredMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
+        """
+        Populates context with filter options.
+
+        Returns:
+            dict: Context data.
+        """
         context = super().get_context_data(**kwargs)
         context.update(
             {

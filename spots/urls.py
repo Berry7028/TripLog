@@ -1,9 +1,17 @@
+"""
+URL configuration for the Spots application.
+
+This module defines the URL patterns for the application, mapping URLs to their
+corresponding view functions or classes. It covers standard user views, API endpoints,
+and the custom administration dashboard.
+"""
+
 from django.urls import path
 
 from . import views, admin_views
 
 urlpatterns = [
-    # ホーム・ランキング・ユーザー関連
+    # Home, Ranking, and User-related views
     path('', views.home, name='home'),
     path('home/', views.home, name='home'),
     path('ranking/', views.ranking, name='ranking'),
@@ -11,23 +19,23 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('register/', views.register, name='register'),
 
-    # スポット詳細・操作
+    # Spot Details and Operations
     path('spot/<int:spot_id>/', views.spot_detail, name='spot_detail'),
     path('spot/<int:spot_id>/favorite/', views.toggle_favorite, name='toggle_favorite'),
     path('spot/<int:spot_id>/review/', views.add_review, name='add_review'),
     path('spot/<int:spot_id>/record-view/', views.record_spot_view, name='record_spot_view'),
     path('add/', views.add_spot, name='add_spot'),
 
-    # APIエンドポイント
+    # API Endpoints
     path('api/search/', views.search_spots_api, name='search_spots_api'),
     path('api/spots/', views.spots_api, name='spots_api'),
     path('api/spots/add/', views.add_spot_api, name='add_spot_api'),
 
-    # 地図・プラン
+    # Map and Plan Views
     path('map/', views.map_view, name='map'),
     path('plan/', views.plan_view, name='plan'),
 
-    # 管理ダッシュボード
+    # Admin Dashboard Views
     path('manage/', admin_views.AdminDashboardView.as_view(), name='admin_dashboard'),
     path('manage/spots/', admin_views.SpotAdminListView.as_view(), name='admin_spot_list'),
     path('manage/spots/add/', admin_views.SpotAdminCreateView.as_view(), name='admin_spot_add'),

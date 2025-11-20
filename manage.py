@@ -1,11 +1,26 @@
 #!/usr/bin/env python
-"""Django の管理作業用コマンドラインユーティリティ。"""
+"""
+Django's command-line utility for administrative tasks.
+
+This module acts as the entry point for running Django management commands,
+such as starting the development server, running migrations, and creating
+superusers.
+"""
 import os
 import sys
 
 
 def main():
-    """管理系タスクを実行する。"""
+    """
+    Run administrative tasks.
+
+    Sets the default Django settings module to 'travel_log_map.settings'
+    and executes the command line arguments using Django's management utility.
+
+    Raises:
+        ImportError: If Django cannot be imported, likely due to a missing
+            installation or an unactivated virtual environment.
+    """
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'travel_log_map.settings')
     try:
         from django.core.management import execute_from_command_line
