@@ -12,8 +12,8 @@
                 {% if search_query %}
                 <input type="hidden" name="search" value="{{ search_query }}">
                 {% endif %}
-                <label for="sortMode" class="form-label mb-0" style="white-space:nowrap; font-weight:bold; font-size:1.05rem; color:#333;">並び順</label>
-                <select id="sortMode" name="sort" class="form-select" style="min-width:120px; border-radius:8px; border:1px solid #b0b0b0; font-size:1rem; padding:6px 16px; transition:border-color 0.2s; background:#fff;" onchange="this.form.submit()" onfocus="this.style.borderColor='#6B9080'" onblur="this.style.borderColor='#b0b0b0'">
+                <label for="sortMode" class="form-label mb-0" style="white-space:nowrap; font-weight:bold; font-size:1.05rem;">並び順</label>
+                <select id="sortMode" name="sort" class="form-select" style="min-width:120px;" onchange="this.form.submit()">
                     <option value="recent" {% if sort_mode != 'relevance' %}selected{% endif %}>新着順</option>
                 </select>
             </form>
@@ -44,7 +44,7 @@
                         {% if spot.tags.all %}
                         <div class="mb-2">
                             {% for tag in spot.tags.all %}
-                                <span class="badge bg-light text-dark border me-1">#{{ tag.name }}</span>
+                                <span class="badge badge-custom me-1">#{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                         {% endif %}
