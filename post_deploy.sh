@@ -9,20 +9,20 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ 
     
     # Create superuser using environment variables
     python manage.py shell << 'EOF'
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
-        import os
-        username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
-        email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
-        password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+import os
+username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
+email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
+password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
 
-        # Check if user already exists
-        if User.objects.filter(username=username).exists():
-            print(f"Superuser '{username}' already exists")
-        else:
-            User.objects.create_superuser(username=username, email=email, password=password)
-            print(f"Superuser '{username}' created successfully")
+# Check if user already exists
+if User.objects.filter(username=username).exists():
+    print(f"Superuser '{username}' already exists")
+else:
+    User.objects.create_superuser(username=username, email=email, password=password)
+    print(f"Superuser '{username}' created successfully")
 EOF
     
     echo "Superuser setup completed"
