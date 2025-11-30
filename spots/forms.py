@@ -5,7 +5,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group, Permission, User
 
 from .models import Spot, Review, UserProfile, Tag
-
+from .services.image_lookup import fetch_spot_image
 
 def _normalize_tags(tags_text: str) -> list[str]:
     """カンマ区切りのタグ文字列を正規化し、一意なリストに変換する。"""
@@ -94,11 +94,30 @@ class SpotForm(forms.ModelForm):
             instance.created_by = user
         if commit:
             instance.save()
+            self._fill_image_if_needed(instance)
             self._apply_tags(instance)
         else:
             self._pending_instance = instance
         return instance
 
+    def _fill_image_if_needed(self, instance: Spot) -> None:
+        if instance.image or instance.image_url:
+            return
+        result = fetch_spot_image(
+            title=instance.title,
+            description=instance.description,
+            latitude=instance.latitude,
+            longitude=instance.longitude,
+        )
+        if result:
+            instance.image_url = result.url
+            if result.attribution == "Unsplash":
+                instance.image_source = Spot.ImageSource.UNSPLASH
+            elif result.attribution == "Wikipedia":
+                instance.image_source = Spot.ImageSource.WIKIPEDIA
+            else:
+                instance.image_source = Spot.ImageSource.OTHER
+            instance.save(update_fields=["image_url", "image_source"])
     def save_m2m(self):  # type: ignore[override]
         if hasattr(self, '_pending_instance'):
             self._apply_tags(self._pending_instance)

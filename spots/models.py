@@ -39,6 +39,20 @@ class Spot(models.Model):
         verbose_name_plural = 'スポット'
         ordering = ['-created_at']
 
+    class ImageSource(models.TextChoices):
+        UPLOADED = "uploaded", "ユーザーアップロード"
+        UNSPLASH = "unsplash", "Unsplash"
+        WIKIPEDIA = "wikipedia", "Wikipedia"
+        OTHER = "other", "その他"
+        UNKNOWN = "unknown", "不明"
+
+    image_source = models.CharField(
+        max_length=20,
+        choices=ImageSource.choices,
+        default=ImageSource.UNKNOWN,
+        verbose_name='画像ソース'
+    )
+
     def __str__(self):
         return self.title
 
@@ -56,6 +70,9 @@ class Spot(models.Model):
                 # 画像が未設定の場合、Djangoはurlアクセスで例外を投げることがある
                 pass
         return self.image_url or ''
+    @property
+    def image_source_label(self) -> str:
+        return self.get_image_source_display()
 
 
 class Review(models.Model):

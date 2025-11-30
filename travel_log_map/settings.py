@@ -8,7 +8,7 @@ Django 5.2.6 で 'django-admin startproject' を実行して生成されまし�
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-
+import logging
 
 def _env_int(name: str, default: int) -> int:
     """環境変数を整数として取得。変換できない場合はデフォルト値。"""
@@ -181,3 +181,13 @@ CSRF_TRUSTED_ORIGINS = [
 
 # iframe 埋め込みを許可（VS Code Simple Browser 対応）
 X_FRAME_OPTIONS = 'ALLOWALL'
+
+
+UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', '')
+IMAGE_LOOKUP_ENABLED = bool(UNSPLASH_ACCESS_KEY)
+
+if not IMAGE_LOOKUP_ENABLED:
+    logging.getLogger(__name__).warning(
+        "Image auto lookup disabled (UNSPLASH_ACCESS_KEY not set). "
+        "Wikipedia fallback will still be attempted."
+    )  
