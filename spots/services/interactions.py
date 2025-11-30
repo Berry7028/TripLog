@@ -20,6 +20,7 @@ def log_spot_view(spot: Spot, user: Any) -> None:
 
     try:
         SpotView.objects.create(spot=spot)
+        Spot.objects.filter(pk=spot.pk).update(pv=F('pv') + 1)
     except Exception:  # pragma: no cover - ログ記録失敗は致命的ではない
         logger.exception("Failed to store SpotView log", extra={"spot_id": spot.id})
 
