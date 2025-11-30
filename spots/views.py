@@ -318,3 +318,8 @@ def _extract_first_error_message(form: SpotForm) -> str:
     if non_field_errors:
         return non_field_errors[0]
     return '入力内容を確認してください。'
+
+
+def licenses(request):
+    """ライセンス・謝辞ページ"""
+    return render(request, 'spots/licenses.html')
