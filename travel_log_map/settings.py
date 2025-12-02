@@ -98,10 +98,24 @@ WSGI_APPLICATION = 'travel_log_map.wsgi.application'
 # 参考: https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 if 'DATABASE_URL' in os.environ and dj_database_url:
+    # DATABASE_URL が設定されている場合は dj_database_url を使用
     DATABASES = {
         'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
     }
+elif not DEBUG and os.environ.get('DB_ENGINE'):
+    # DEBUG=False かつ DB_ENGINE が設定されている場合は環境変数から PostgreSQL 設定を読み込む
+    DATABASES = {
+        'default': {
+            'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
+            'NAME': os.environ.get('DB_NAME', ''),
+            'USER': os.environ.get('DB_USER', ''),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
 else:
+    # 開発環境（DEBUG=True）または環境変数が未設定の場合は SQLite を使用
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
