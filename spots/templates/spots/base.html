@@ -124,15 +124,38 @@
             const htmlElement = document.documentElement;
             const icon = themeToggle.querySelector('i');
 
+            // Accessing localStorage can throw in some browsers/contexts (e.g. private mode on Safari)
+            let storageAvailable = true;
+            try {
+                const testKey = '__triplog_theme_test__';
+                localStorage.setItem(testKey, '1');
+                localStorage.removeItem(testKey);
+            } catch (err) {
+                storageAvailable = false;
+            }
+
             // Check for saved theme preference or system preference
-            const savedTheme = localStorage.getItem('theme');
+            let savedTheme = null;
+            if (storageAvailable) {
+                try {
+                    savedTheme = localStorage.getItem('theme');
+                } catch (err) {
+                    storageAvailable = false;
+                }
+            }
             const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             
             let currentTheme = savedTheme || systemTheme;
 
             function setTheme(theme) {
                 htmlElement.setAttribute('data-theme', theme);
-                localStorage.setItem('theme', theme);
+                if (storageAvailable) {
+                    try {
+                        localStorage.setItem('theme', theme);
+                    } catch (err) {
+                        storageAvailable = false;
+                    }
+                }
                 
                 if (theme === 'dark') {
                     icon.classList.remove('fa-moon');
