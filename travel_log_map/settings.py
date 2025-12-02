@@ -188,9 +188,8 @@ LOGOUT_REDIRECT_URL = '/'
 # 外部アクセス用の CSRF 設定
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
-    'https://8000-ij3w7fliisck5f9nvstl9-41315974.manusvm.computer',
-    'https://8001-ij3w7fliisck5f9nvstl9-41315974.manusvm.computer',
-    'https://*.manusvm.computer',
+    'https://*.railway.app',
+    'https://triplog-production.up.railway.app',
 ]
 
 # iframe 埋め込みを許可（VS Code Simple Browser 対応）
