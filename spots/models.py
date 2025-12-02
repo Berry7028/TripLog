@@ -27,7 +27,7 @@ class Spot(models.Model):
     longitude = models.FloatField(verbose_name='経度')
     address = models.CharField(max_length=300, verbose_name='住所', blank=True)
     image = models.ImageField(upload_to='spot_images/', verbose_name='画像', blank=True, null=True)
-    image_url = models.URLField(blank=True, null=True, verbose_name='画像URL')
+    image_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='画像URL')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='投稿者')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
@@ -161,5 +161,4 @@ class UserSpotInteraction(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.username} → {self.spot.title} ({self.view_count}回)'
-
 
