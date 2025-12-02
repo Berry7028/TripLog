@@ -190,6 +190,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
     'https://*.railway.app',
     'https://triplog-production.up.railway.app',
+    "https://api.unsplash.com/search/photos",
+    "https://ja.wikipedia.org/*"
 ]
 
 # iframe 埋め込みを許可（VS Code Simple Browser 対応）
