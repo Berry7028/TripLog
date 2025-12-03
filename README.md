@@ -73,6 +73,10 @@ python manage.py migrate
 gunicorn travel_log_map.wsgi:application --bind 0.0.0.0:$PORT
 ```
 
+## Debug Tools
+Django html で Emmetのサポートをしています
+またhtmlを編集しセーブをしたらブラウザーのホットリロードが入るようなシステムを導入しています
+
 ## プロジェクト構成
 ```
 ├── manage.py               # Django 管理コマンドエントリ

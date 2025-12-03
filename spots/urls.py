@@ -1,8 +1,13 @@
-from django.urls import path
+from django.urls import path, include
 
 from . import views, admin_views
 
 urlpatterns = [
+
+    ## debug
+    path("__reload__/", include("django_browser_reload.urls")),
+
+
     # ホーム・ランキング・ユーザー関連
     path('', views.home, name='home'),
     path('home/', views.home, name='home'),
