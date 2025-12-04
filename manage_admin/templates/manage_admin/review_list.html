@@ -1,0 +1,104 @@
+{% extends 'manage_admin/base_admin.html' %}
+
+{% block admin_title %} | レビュー管理{% endblock %}
+
+{% block admin_header %}
+<div class="admin-header-row">
+    <div>
+        <h1 class="admin-title"><i class="fas fa-comments me-2"></i>レビュー管理</h1>
+        <p class="admin-subtitle">レビューをモデレートし、必要に応じて編集・削除します。</p>
+    </div>
+    <div>
+        <a class="btn btn-primary" href="{% url 'admin_review_add' %}"><i class="fas fa-plus me-1"></i>新規レビュー</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block admin_content %}
+<form method="get" class="admin-filter-form">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">キーワード</label>
+            <input type="search" name="q" value="{{ search_query }}" class="form-control" placeholder="スポット名・ユーザー名・コメント">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">評価</label>
+            <select name="rating" class="form-select">
+                <option value="">すべて</option>
+                {% for r in '12345' %}
+                <option value="{{ r }}" {% if selected_rating == r %}selected{% endif %}>{{ r }}★</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-secondary" type="submit"><i class="fas fa-filter me-1"></i>絞り込み</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_review_list' %}"><i class="fas fa-undo me-1"></i>リセット</a>
+    </div>
+</form>
+
+<form method="post" class="mt-4">
+    {% csrf_token %}
+    <div class="table-responsive">
+        <table class="table table-striped admin-table">
+            <thead>
+                <tr>
+                    <th style="width:40px"><input type="checkbox" id="select-all-reviews"></th>
+                    <th>スポット</th>
+                    <th>ユーザー</th>
+                    <th>評価</th>
+                    <th>コメント</th>
+                    <th>作成日</th>
+                    <th class="text-end">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for review in reviews %}
+                <tr>
+                    <td><input type="checkbox" name="selected" value="{{ review.pk }}" class="form-check-input"></td>
+                    <td>{{ review.spot.title }}</td>
+                    <td>{{ review.user.username }}</td>
+                    <td><span class="admin-badge admin-badge--rating"><i class="fas fa-star"></i>{{ review.rating }}</span></td>
+                    <td class="small text-muted">{{ review.comment|truncatechars:80 }}</td>
+                    <td>{{ review.created_at|date:'Y-m-d H:i' }}</td>
+                    <td class="text-end">
+                        <div class="btn-group">
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_review_edit' review.pk %}"><i class="fas fa-edit"></i></a>
+                            <a class="btn btn-sm btn-outline-danger" href="{% url 'admin_review_delete' review.pk %}"><i class="fas fa-trash"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">レビューが見つかりません。</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <select name="action" class="form-select w-auto">
+            <option value="">操作を選択</option>
+            <option value="delete_selected">選択したレビューを削除</option>
+        </select>
+        <button type="submit" class="btn btn-secondary"><i class="fas fa-play"></i> 実行</button>
+    </div>
+</form>
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const master = document.getElementById('select-all-reviews');
+  if (!master) return;
+  master.addEventListener('change', () => {
+    document.querySelectorAll('input[name="selected"]').forEach(cb => {
+      cb.checked = master.checked;
+    });
+  });
+});
+</script>
+{% endblock %}
+
+{% include 'manage_admin/pagination.html' with page_obj=page_obj %}
+{% endblock %}

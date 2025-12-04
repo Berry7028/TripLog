@@ -1,0 +1,49 @@
+{% extends 'manage_admin/base_admin.html' %}
+
+{% block admin_title %} | レビュー{% if form.instance.pk %}編集{% else %}作成{% endif %}{% endblock %}
+
+{% block admin_header %}
+<h1 class="admin-title"><i class="fas fa-comments me-2"></i>レビュー{% if form.instance.pk %}編集{% else %}作成{% endif %}</h1>
+<p class="admin-subtitle">レビュー内容を{% if form.instance.pk %}調整{% else %}登録{% endif %}します。</p>
+{% endblock %}
+
+{% block admin_content %}
+<form method="post" class="admin-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                {{ form.spot.label_tag }}
+                {{ form.spot }}
+                {{ form.spot.errors }}
+            </div>
+            <div class="col-md-6">
+                {{ form.user.label_tag }}
+                {{ form.user }}
+                {{ form.user.errors }}
+            </div>
+            <div class="col-md-3">
+                {{ form.rating.label_tag }}
+                {{ form.rating }}
+                {{ form.rating.errors }}
+            </div>
+            <div class="col-12">
+                {{ form.comment.label_tag }}
+                {{ form.comment }}
+                {{ form.comment.errors }}
+            </div>
+        </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>保存</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_review_list' %}">キャンセル</a>
+        {% if form.instance.pk %}
+        <a class="btn btn-outline-danger ms-auto" href="{% url 'admin_review_delete' form.instance.pk %}"><i class="fas fa-trash me-1"></i>削除</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}

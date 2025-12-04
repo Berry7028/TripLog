@@ -1,0 +1,63 @@
+{% extends 'manage_admin/base_admin.html' %}
+
+{% block admin_title %} | プロフィール一覧{% endblock %}
+
+{% block admin_header %}
+<h1 class="admin-title"><i class="fas fa-id-card me-2"></i>プロフィール一覧</h1>
+<p class="admin-subtitle">ユーザープロフィールとお気に入りスポットを確認します。</p>
+{% endblock %}
+
+{% block admin_content %}
+<form method="get" class="admin-filter-form">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">キーワード</label>
+            <input type="search" name="q" value="{{ search_query }}" class="form-control" placeholder="ユーザー名・自己紹介・お気に入りスポット">
+        </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-secondary" type="submit"><i class="fas fa-search me-1"></i>検索</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_profile_list' %}"><i class="fas fa-undo me-1"></i>リセット</a>
+    </div>
+</form>
+
+<div class="table-responsive mt-4">
+    <table class="table table-striped admin-table">
+        <thead>
+            <tr>
+                <th>ユーザー</th>
+                <th>自己紹介</th>
+                <th>お気に入りスポット</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for profile in profiles %}
+            <tr>
+                <td>
+                    <strong>{{ profile.user.username }}</strong>
+                    <div class="small text-muted">{{ profile.user.email|default:'-' }}</div>
+                </td>
+                <td class="small text-muted">{{ profile.bio|default:'(未設定)' }}</td>
+                <td>
+                    {% if profile.favorite_spots.all|length %}
+                    <div class="admin-chip-list">
+                        {% for spot in profile.favorite_spots.all %}
+                        <span class="admin-chip">#{{ spot.title }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">お気に入りなし</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center text-muted py-4">プロフィールが見つかりません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'manage_admin/pagination.html' with page_obj=page_obj %}
+{% endblock %}
