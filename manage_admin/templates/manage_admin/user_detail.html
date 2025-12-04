@@ -1,0 +1,129 @@
+{% extends 'manage_admin/base_admin.html' %}
+
+{% block admin_title %} | ユーザー詳細{% endblock %}
+
+{% block admin_header %}
+<div class="admin-header-row">
+    <div>
+        <h1 class="admin-title"><i class="fas fa-user me-2"></i>{{ user_obj.username }} の詳細</h1>
+        <p class="admin-subtitle">ユーザー情報とプロフィールを更新します。</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{% url 'admin_user_password' user_obj.pk %}"><i class="fas fa-key me-1"></i>パスワード変更</a>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_user_list' %}"><i class="fas fa-list me-1"></i>一覧へ</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block admin_content %}
+<form method="post" enctype="multipart/form-data" class="admin-form">
+    {% csrf_token %}
+    {% if user_form.non_field_errors %}
+    <div class="alert alert-danger">{{ user_form.non_field_errors }}</div>
+    {% endif %}
+    {% if profile_form.non_field_errors %}
+    <div class="alert alert-danger">{{ profile_form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">アカウント情報</div>
+                <div class="card-body">
+                    {{ user_form.username.label_tag }}
+                    {{ user_form.username }}
+                    {{ user_form.username.errors }}
+
+                    {{ user_form.email.label_tag }}
+                    {{ user_form.email }}
+                    {{ user_form.email.errors }}
+
+                    <div class="form-check mt-3">
+                        {{ user_form.is_active }}
+                        {{ user_form.is_active.label_tag }}
+                        {{ user_form.is_active.errors }}
+                    </div>
+                    <div class="form-check mt-2">
+                        {{ user_form.is_staff }}
+                        {{ user_form.is_staff.label_tag }}
+                        {{ user_form.is_staff.errors }}
+                    </div>
+                    <div class="form-check mt-2">
+                        {{ user_form.is_superuser }}
+                        {{ user_form.is_superuser.label_tag }}
+                        {{ user_form.is_superuser.errors }}
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        {{ user_form.groups.label_tag }}
+                        {{ user_form.groups }}
+                        {{ user_form.groups.errors }}
+                    </div>
+                    <div>
+                        {{ user_form.user_permissions.label_tag }}
+                        {{ user_form.user_permissions }}
+                        {{ user_form.user_permissions.errors }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">プロフィール</div>
+                <div class="card-body">
+                    {{ profile_form.bio.label_tag }}
+                    {{ profile_form.bio }}
+                    {{ profile_form.bio.errors }}
+
+                    {{ profile_form.avatar.label_tag }}
+                    {{ profile_form.avatar }}
+                    {{ profile_form.avatar.errors }}
+
+                    {{ profile_form.favorite_spots.label_tag }}
+                    {{ profile_form.favorite_spots }}
+                    {{ profile_form.favorite_spots.errors }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="fas fa-save me-1"></i>保存</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_user_list' %}">一覧へ戻る</a>
+    </div>
+</form>
+
+<div class="row g-4 mt-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header">最近の投稿スポット</div>
+            <ul class="list-group list-group-flush">
+                {% for spot in recent_spots %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ spot.title }}</span>
+                    <span class="badge bg-light text-dark">{{ spot.created_at|date:'Y-m-d' }}</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">投稿履歴がありません。</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header">最近のレビュー</div>
+            <ul class="list-group list-group-flush">
+                {% for review in recent_reviews %}
+                <li class="list-group-item">
+                    <div class="fw-bold">{{ review.spot.title }} / {{ review.rating }}★</div>
+                    <div class="small text-muted">{{ review.created_at|date:'Y-m-d H:i' }}</div>
+                    <div class="small">{{ review.comment|truncatechars:80 }}</div>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">レビュー履歴がありません。</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

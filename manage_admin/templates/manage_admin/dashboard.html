@@ -1,0 +1,131 @@
+{% extends 'manage_admin/base_admin.html' %}
+
+{% block admin_title %} | ダッシュボード{% endblock %}
+
+{% block admin_header %}
+<h1 class="admin-title"><i class="fas fa-chart-line me-2"></i>ダッシュボード</h1>
+<p class="admin-subtitle">直近の状況を把握し、主要データを素早く確認できます。</p>
+{% endblock %}
+
+{% block admin_content %}
+<section class="admin-metrics">
+    <div class="metric-card">
+        <div class="metric-icon metric-icon--spots"><i class="fas fa-map-marker-alt"></i></div>
+        <div class="metric-label">スポット</div>
+        <div class="metric-value">{{ total_spots }}</div>
+        <div class="metric-footer">合計登録数</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon metric-icon--reviews"><i class="fas fa-comments"></i></div>
+        <div class="metric-label">レビュー</div>
+        <div class="metric-value">{{ total_reviews }}</div>
+        <div class="metric-footer">コミュニティからの声</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon metric-icon--users"><i class="fas fa-user-friends"></i></div>
+        <div class="metric-label">ユーザー</div>
+        <div class="metric-value">{{ total_users }}</div>
+        <div class="metric-footer">登録ユーザー数</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon metric-icon--tags"><i class="fas fa-tags"></i></div>
+        <div class="metric-label">タグ</div>
+        <div class="metric-value">{{ total_tags }}</div>
+        <div class="metric-footer">整理に利用されたタグ</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon metric-icon--views"><i class="fas fa-eye"></i></div>
+        <div class="metric-label">直近7日閲覧</div>
+        <div class="metric-value">{{ views_last_week }}</div>
+        <div class="metric-footer">SpotView ログ</div>
+    </div>
+</section>
+
+<section class="admin-panels">
+    <div class="panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-bolt me-2"></i>最新スポット</h2>
+            <a href="{% url 'admin_spot_list' %}" class="panel-link">一覧を見る</a>
+        </div>
+        <ul class="panel-list">
+            {% for spot in new_spots %}
+            <li>
+                <span class="panel-title">{{ spot.title }}</span>
+                <span class="panel-meta">{{ spot.created_by.username }} / {{ spot.created_at|date:'Y-m-d H:i' }}</span>
+            </li>
+            {% empty %}
+            <li class="panel-empty">最近追加されたスポットはありません。</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-comments me-2"></i>最新レビュー</h2>
+            <a href="{% url 'admin_review_list' %}" class="panel-link">一覧を見る</a>
+        </div>
+        <ul class="panel-list">
+            {% for review in recent_reviews %}
+            <li>
+                <span class="panel-title">{{ review.spot.title }} / {{ review.user.username }}</span>
+                <span class="panel-meta">{{ review.created_at|date:'Y-m-d H:i' }} / <span class="admin-badge admin-badge--rating"><i class="fas fa-star"></i>{{ review.rating }}</span></span>
+                <p class="panel-text">{{ review.comment|truncatechars:70 }}</p>
+            </li>
+            {% empty %}
+            <li class="panel-empty">最近投稿されたレビューはありません。</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-fire me-2"></i>注目スポット</h2>
+            <a href="{% url 'admin_spot_list' %}" class="panel-link">一覧を見る</a>
+        </div>
+        <ul class="panel-list">
+            {% for spot in top_spots %}
+            <li>
+                <span class="panel-title">{{ spot.title }}</span>
+                <span class="panel-meta">閲覧 {{ spot.weekly_views }} / 評価 {% if spot.review_avg %}{{ spot.review_avg|floatformat:1 }}{% else %}-{% endif %}</span>
+            </li>
+            {% empty %}
+            <li class="panel-empty">ランキング対象のスポットがありません。</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-tags me-2"></i>人気タグ</h2>
+            <a href="{% url 'admin_tag_list' %}" class="panel-link">タグ管理へ</a>
+        </div>
+        <ul class="panel-list">
+            {% for tag in popular_tags %}
+            <li>
+                <span class="panel-title"><span class="admin-chip">#{{ tag.name }}</span></span>
+                <span class="panel-meta">関連スポット {{ tag.spot_count }}</span>
+            </li>
+            {% empty %}
+            <li class="panel-empty">タグがまだありません。</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-user-friends me-2"></i>アクティブユーザー</h2>
+            <a href="{% url 'admin_user_list' %}" class="panel-link">ユーザー管理へ</a>
+        </div>
+        <ul class="panel-list">
+            {% for user in top_reviewers %}
+            <li>
+                <span class="panel-title">{{ user.username }}</span>
+                <span class="panel-meta"><span class="admin-badge admin-badge--rating"><i class="fas fa-comment-dots"></i>{{ user.review_count }}</span></span>
+            </li>
+            {% empty %}
+            <li class="panel-empty">レビュー実績のあるユーザーがまだいません。</li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>
+{% endblock %}

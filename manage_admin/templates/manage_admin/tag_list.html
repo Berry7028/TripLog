@@ -1,0 +1,62 @@
+{% extends 'manage_admin/base_admin.html' %}
+
+{% block admin_title %} | タグ管理{% endblock %}
+
+{% block admin_header %}
+<div class="admin-header-row">
+    <div>
+        <h1 class="admin-title"><i class="fas fa-tags me-2"></i>タグ管理</h1>
+        <p class="admin-subtitle">タグの追加・編集・削除を行います。</p>
+    </div>
+    <div>
+        <a class="btn btn-primary" href="{% url 'admin_tag_add' %}"><i class="fas fa-plus me-1"></i>新規タグ</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block admin_content %}
+<form method="get" class="admin-filter-form">
+    <div class="row g-3">
+        <div class="col-md-5">
+            <label class="form-label">キーワード</label>
+            <input type="search" name="q" value="{{ search_query }}" class="form-control" placeholder="タグ名">
+        </div>
+    </div>
+    <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-secondary" type="submit"><i class="fas fa-search me-1"></i>検索</button>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_tag_list' %}"><i class="fas fa-undo me-1"></i>リセット</a>
+    </div>
+</form>
+
+<div class="table-responsive mt-4">
+    <table class="table table-striped admin-table">
+        <thead>
+            <tr>
+                <th>タグ名</th>
+                <th class="text-end">関連スポット数</th>
+                <th class="text-end">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tag in tags %}
+            <tr>
+                <td><span class="admin-chip">#{{ tag.name }}</span></td>
+                <td class="text-end"><span class="admin-badge">{{ tag.spot_count }} 件</span></td>
+                <td class="text-end">
+                    <div class="btn-group">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_tag_edit' tag.pk %}"><i class="fas fa-edit"></i></a>
+                        <a class="btn btn-sm btn-outline-danger" href="{% url 'admin_tag_delete' tag.pk %}"><i class="fas fa-trash"></i></a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center text-muted py-4">タグが見つかりません。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'manage_admin/pagination.html' with page_obj=page_obj %}
+{% endblock %}

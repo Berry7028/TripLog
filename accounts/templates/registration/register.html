@@ -1,0 +1,118 @@
+{% extends 'spots/base.html' %}
+
+{% block title %}新規登録 - 旅ログマップ{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2><i class="fas fa-user-plus me-2"></i>新規登録</h2>
+                <p class="text-muted mb-0">旅ログマップへようこそ！</p>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">ユーザー名</label>
+                        <input
+                            type="text"
+                            name="{{ form.username.name }}"
+                            id="{{ form.username.id_for_label }}"
+                            class="form-control"
+                            placeholder="ユーザー名を入力"
+                            autocomplete="username"
+                            value="{{ form.username.value|default_if_none:'' }}"
+                            required
+                        >
+                        {% if form.username.errors %}
+                        <div class="text-danger">{{ form.username.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">150文字以下で入力してください。英数字と @/./+/-/_ のみ使用可能です。</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">パスワード</label>
+                        <input
+                            type="password"
+                            name="{{ form.password1.name }}"
+                            id="{{ form.password1.id_for_label }}"
+                            class="form-control"
+                            placeholder="パスワードを入力"
+                            autocomplete="new-password"
+                            required
+                        >
+                        {% if form.password1.errors %}
+                        <div class="text-danger">{{ form.password1.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            <ul class="mb-0">
+                                <li>他の個人情報と類似していないこと</li>
+                                <li>最低8文字以上であること</li>
+                                <li>一般的すぎるパスワードでないこと</li>
+                                <li>数字のみでないこと</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">パスワード（確認）</label>
+                        <input
+                            type="password"
+                            name="{{ form.password2.name }}"
+                            id="{{ form.password2.id_for_label }}"
+                            class="form-control"
+                            placeholder="もう一度入力"
+                            autocomplete="new-password"
+                            required
+                        >
+                        {% if form.password2.errors %}
+                        <div class="text-danger">{{ form.password2.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">確認のため、上記と同じパスワードを入力してください。</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>アカウントを作成
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">
+                    既にアカウントをお持ちですか？ 
+                    <a href="{% url 'login' %}">ログイン</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- サービス紹介 -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>旅ログマップでできること</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4 mb-3">
+                        <i class="fas fa-map-marked-alt fa-2x text-primary mb-2"></i>
+                        <h6>スポット投稿</h6>
+                        <p class="text-muted small">お気に入りの場所を写真と一緒に投稿</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                        <h6>レビュー機能</h6>
+                        <p class="text-muted small">他の人の投稿にレビューを投稿</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <i class="fas fa-search fa-2x text-success mb-2"></i>
+                        <h6>スポット検索</h6>
+                        <p class="text-muted small">行きたい場所を簡単に検索</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

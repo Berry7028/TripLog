@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_browser_reload',
     'spots',
+    'accounts',
+    'manage_admin',
 ]
 
 # 本番環境では whitenoise.runserver_nostatic を追加して Django の静的ファイル配信を無効化
