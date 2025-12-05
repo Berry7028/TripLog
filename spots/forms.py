@@ -113,8 +113,6 @@ class SpotForm(forms.ModelForm):
             instance.image_url = result.url
             if result.attribution == "Unsplash":
                 instance.image_source = Spot.ImageSource.UNSPLASH
-            elif result.attribution == "Wikipedia":
-                instance.image_source = Spot.ImageSource.WIKIPEDIA
             else:
                 instance.image_source = Spot.ImageSource.OTHER
             instance.save(update_fields=["image_url", "image_source"])

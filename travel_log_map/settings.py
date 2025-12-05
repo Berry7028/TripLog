@@ -195,7 +195,6 @@ CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
     'https://triplog-production.up.railway.app',
     "https://api.unsplash.com/search/photos",
-    "https://ja.wikipedia.org/*"
 ]
 
 # iframe 埋め込みを許可（VS Code Simple Browser 対応）
@@ -203,10 +202,4 @@ X_FRAME_OPTIONS = 'ALLOWALL'
 
 
 UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', '')
-IMAGE_LOOKUP_ENABLED = bool(UNSPLASH_ACCESS_KEY)
-
-if not IMAGE_LOOKUP_ENABLED:
-    logging.getLogger(__name__).warning(
-        "Image auto lookup disabled (UNSPLASH_ACCESS_KEY not set). "
-        "Wikipedia fallback will still be attempted."
-    )  
+IMAGE_LOOKUP_ENABLED = bool(UNSPLASH_ACCESS_KEY)  
