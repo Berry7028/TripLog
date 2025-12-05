@@ -18,13 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from spots.views import logout_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('spots.urls')),
-    path('accounts/logout/', logout_view, name='logout'),
-    path('accounts/', include('django.contrib.auth.urls')),
+    path('accounts/', include('accounts.urls')),
+    path('manage/', include('manage_admin.urls')),
 ]
 
 # 開発環境でのメディアファイル配信
