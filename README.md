@@ -37,6 +37,13 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+## git & github に関すること
+- 永続ブランチはmain, developブランチです。
+- 機能追加や修正はdevelopブランチから新規ブランチを切って行い、完了後にdevelopへプルリクエストを送る
+- mainブランチdevelopブランチはともにpushされた時に新しくデプロイTASKが実行され、自動でデプロイされます。
+- 簡単なことだったら直接developブランチへpushしてもいい
+
+
 ## 環境変数
 開発では `.env` もしくは `.env.local` に以下を設定してください。
 
