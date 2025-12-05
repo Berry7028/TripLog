@@ -17,20 +17,20 @@
 }
 
 html[data-theme="dark"] {
-  --brand-teal: #715A5A;       /* #715A5A - Accent/Header */
-  --brand-teal-dark: #5a4646;  /* Darker shade of #715A5A */
-  --footer-deep: #25242b;      /* Darker shade of #37353E */
-  --light-gray: #44444E;       /* #44444E - Surface */
-  --accent-pink: #D3DAD9;      /* #D3DAD9 - Light Text/Accent */
-  --page-cream: #37353E;       /* #37353E - Background */
-  --panel-gray: #44444E;       /* #44444E - Surface */
-  --text-main: #D3DAD9;        /* #D3DAD9 - Text */
-  --card-bg: #44444E;          /* #44444E - Surface */
-  --input-bg: #37353E;         /* #37353E - Background */
-  --input-text: #D3DAD9;       /* #D3DAD9 - Text */
-  --badge-bg: #37353E;         /* #37353E - Background */
-  --badge-text: #D3DAD9;       /* #D3DAD9 - Text */
-  --border-color: #555560;     /* Slightly lighter border */
+  --brand-teal: #4f565d;       /* Header/controls */
+  --brand-teal-dark: #6a717a;  /* Hover/depth */
+  --footer-deep: #1f2227;      /* Footer band */
+  --light-gray: #3c4047;       /* Card surfaces */
+  --accent-pink: #f0c686;      /* Accent buttons/badges */
+  --page-cream: #2b3036;       /* Page background */
+  --panel-gray: #3e434a;       /* Secondary panels */
+  --text-main: #f1f2f4;        /* Primary text */
+  --card-bg: #3c4047;          /* Card shell */
+  --input-bg: #2e333a;         /* Inputs */
+  --input-text: #f1f2f4;       /* Input text */
+  --badge-bg: #3b3f46;         /* Badge background */
+  --badge-text: #f1f2f4;       /* Badge text */
+  --border-color: #4b515a;     /* Soft divider */
 }
 
 html, body {
@@ -136,6 +136,73 @@ body {
 .footer { background: var(--footer-deep); color: #fff; }
 .footer .footer-link { color: #fff; text-decoration: underline; }
 .footer .footer-link:hover { color: #e6fffb; }
+
+/* Dark theme specific polish */
+html[data-theme="dark"] body {
+  background: var(--page-cream);
+}
+html[data-theme="dark"] .navbar-custom {
+  background: linear-gradient(180deg, #4f565d 0%, #444a51 100%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="dark"] .navbar-custom .nav-link {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+html[data-theme="dark"] .search-input {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+}
+html[data-theme="dark"] .search-input::placeholder {
+  color: rgba(241, 242, 244, 0.5);
+}
+html[data-theme="dark"] .spot-card,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .details-surface,
+html[data-theme="dark"] .map-frame {
+  background: var(--panel-gray);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+html[data-theme="dark"] .spot-card .spot-info,
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .card-footer,
+html[data-theme="dark"] .panel-header {
+  background: rgba(255, 255, 255, 0.02);
+}
+html[data-theme="dark"] .spot-card .spot-desc,
+html[data-theme="dark"] .panel-text,
+html[data-theme="dark"] .panel-meta {
+  color: rgba(241, 242, 244, 0.75);
+}
+html[data-theme="dark"] .btn-detail,
+html[data-theme="dark"] .btn-secondary {
+  background: var(--accent-pink);
+  color: #3a2f1e;
+  box-shadow: 0 10px 25px rgba(240, 198, 134, 0.35);
+}
+html[data-theme="dark"] .btn-outline-primary {
+  color: #f1f2f4;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+html[data-theme="dark"] .btn-outline-primary:hover {
+  background: #f1f2f4;
+  color: #2f343a;
+  border-color: #f1f2f4;
+}
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .form-select {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+html[data-theme="dark"] .form-control:focus,
+html[data-theme="dark"] .form-select:focus {
+  border-color: var(--accent-pink);
+  box-shadow: 0 0 0 0.25rem rgba(240, 198, 134, 0.25);
+}
+html[data-theme="dark"] .badge-custom {
+  border-color: rgba(255, 255, 255, 0.08);
+}
 
 /* Generic theming to unify across pages */
 .card { border: none; border-radius: 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); background-color: var(--card-bg); color: var(--text-main); }
