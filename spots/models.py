@@ -102,6 +102,18 @@ class UserProfile(models.Model):
     bio = models.TextField(max_length=500, blank=True, verbose_name='自己紹介')
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name='アバター')
     favorite_spots = models.ManyToManyField(Spot, blank=True, verbose_name='お気に入りスポット')
+
+    class Theme(models.TextChoices):
+        SYSTEM = 'system', 'システム設定'
+        LIGHT = 'light', 'ライト'
+        DARK = 'dark', 'ダーク'
+
+    theme = models.CharField(
+        max_length=10,
+        choices=Theme.choices,
+        default=Theme.SYSTEM,
+        verbose_name='テーマ',
+    )
     
     class Meta:
         verbose_name = 'ユーザープロフィール'
