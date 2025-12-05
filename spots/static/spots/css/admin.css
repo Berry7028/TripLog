@@ -399,17 +399,46 @@
     color: var(--accent-pink) !important;
 }
 
+[data-theme="dark"] .admin-sidebar,
+[data-theme="dark"] .admin-filter-form,
+[data-theme="dark"] .admin-form .card,
+[data-theme="dark"] .panel,
 [data-theme="dark"] .metric-card {
-    background: var(--card-bg);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #3c4047;
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
 }
 
-[data-theme="dark"] .metric-card::after {
-    border-color: rgba(255, 255, 255, 0.15);
+[data-theme="dark"] .admin-sidebar {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .admin-nav-link:hover,
+[data-theme="dark"] .admin-nav-link.is-active {
+    background: rgba(240, 198, 134, 0.2);
+    color: #f1f2f4;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .metric-icon {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+    background: rgba(240, 198, 134, 0.22);
+    color: #f1f2f4;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .metric-card::after {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .panel-list,
+[data-theme="dark"] .admin-filter-form,
+[data-theme="dark"] .admin-table th,
+[data-theme="dark"] .admin-form .card-header {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .admin-badge,
+[data-theme="dark"] .admin-chip {
+    background: rgba(240, 198, 134, 0.2);
+    color: #fde6c1;
 }
