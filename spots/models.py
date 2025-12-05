@@ -42,7 +42,6 @@ class Spot(models.Model):
     class ImageSource(models.TextChoices):
         UPLOADED = "uploaded", "ユーザーアップロード"
         UNSPLASH = "unsplash", "Unsplash"
-        WIKIPEDIA = "wikipedia", "Wikipedia"
         OTHER = "other", "その他"
         UNKNOWN = "unknown", "不明"
 
