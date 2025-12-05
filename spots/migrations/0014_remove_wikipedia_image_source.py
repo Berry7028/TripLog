@@ -3,6 +3,11 @@
 from django.db import migrations, models
 
 
+def replace_wikipedia_source(apps, schema_editor):
+    Spot = apps.get_model('spots', 'Spot')
+    Spot.objects.filter(image_source='wikipedia').update(image_source='other')
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,6 +15,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(replace_wikipedia_source, migrations.RunPython.noop),
         migrations.AlterField(
             model_name='spot',
             name='image_source',
