@@ -57,9 +57,14 @@
                                 </div>
                                 {% endif %}
                             </div>
-                            <a href="{% url 'spot_detail' spot.id %}" class="btn btn-primary btn-sm">
-                                詳細を見る
-                            </a>
+                            <div class="d-flex gap-2">
+                                <a href="{% url 'spot_detail' spot.id %}" class="btn btn-primary btn-sm">
+                                    詳細を見る
+                                </a>
+                                <a href="{% url 'edit_spot' spot.id %}" class="btn btn-outline-secondary btn-sm">
+                                    編集
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

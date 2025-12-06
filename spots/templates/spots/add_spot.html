@@ -1,13 +1,19 @@
 {% extends 'spots/base.html' %}
 
-{% block title %}スポット投稿 - 旅ログマップ{% endblock %}
+{% block title %}{% if is_edit %}スポット編集{% else %}スポット投稿{% endif %} - 旅ログマップ{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h2><i class="fas fa-plus me-2"></i>新しいスポットを投稿</h2>
+                <h2>
+                    {% if is_edit %}
+                    <i class="fas fa-edit me-2"></i>スポットを編集
+                    {% else %}
+                    <i class="fas fa-plus me-2"></i>新しいスポットを投稿
+                    {% endif %}
+                </h2>
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
@@ -103,11 +109,21 @@
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        {% if is_edit and spot %}
+                        <a href="{% url 'spot_detail' spot.id %}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-2"></i>詳細に戻る
+                        </a>
+                        {% else %}
                         <a href="{% url 'home' %}" class="btn btn-secondary me-md-2">
                             <i class="fas fa-times me-2"></i>キャンセル
                         </a>
+                        {% endif %}
                         <button type="submit" class="btn btn-primary">
+                            {% if is_edit %}
+                            <i class="fas fa-save me-2"></i>更新する
+                            {% else %}
                             <i class="fas fa-paper-plane me-2"></i>投稿する
+                            {% endif %}
                         </button>
                     </div>
                 </form>
@@ -172,7 +188,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const addrInput = document.getElementById('id_address');
 
     const tokyo = [35.6762, 139.6503];
-    const pickMap = L.map('pickMap').setView(tokyo, 11);
+    const initialLat = latInput ? parseFloat(latInput.value) : NaN;
+    const initialLng = lngInput ? parseFloat(lngInput.value) : NaN;
+    const hasInitial = !Number.isNaN(initialLat) && !Number.isNaN(initialLng);
+    const initialCenter = hasInitial ? [initialLat, initialLng] : tokyo;
+    const initialZoom = hasInitial ? 13 : 11;
+    const pickMap = L.map('pickMap').setView(initialCenter, initialZoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(pickMap);
@@ -197,6 +218,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (addrInput && d && d.display_name) addrInput.value = d.display_name;
             })
             .catch(() => {});
+    }
+
+    if (hasInitial) {
+        setMarker(initialLat, initialLng, '現在の位置');
     }
 
     pickMap.on('click', function(e) {
