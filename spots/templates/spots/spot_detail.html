@@ -54,6 +54,11 @@
                         >
                             <i class="fas fa-copy me-1"></i>URLコピー
                         </button>
+                        {% if user.is_authenticated and user == spot.created_by %}
+                        <a href="{% url 'edit_spot' spot.id %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-edit me-1"></i>編集
+                        </a>
+                        {% endif %}
                         <i class="bi bi-cloud"></i>{{ spot.image_source_label }}
                     </div>
                     <div id="shareFeedback" class="alert d-none mt-3 mb-0" role="status"></div>
@@ -61,7 +66,10 @@
                 
                 <div class="mb-3">
                     <small class="text-muted">
-                        <i class="fas fa-user me-1"></i>投稿者: {{ spot.created_by.username }}
+                        <i class="fas fa-user me-1"></i>投稿者:
+                        <a href="{% url 'user_profile' spot.created_by.username %}" class="text-decoration-none">
+                            {{ spot.created_by.username }}
+                        </a>
                         <span class="ms-3">
                             <i class="fas fa-calendar me-1"></i>{{ spot.created_at|date:"Y年m月d日" }}
                         </span>
@@ -188,8 +196,11 @@
         <!-- 関連スポット（同じユーザーの投稿） -->
         {% if related_spots and related_spots|length > 0 %}
         <div class="card mt-4">
-            <div class="card-header">
-                <h5><i class="fas fa-user me-2"></i>{{ spot.created_by.username }}さんの他の投稿</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>{{ spot.created_by.username }}さんの他の投稿</h5>
+                <a href="{% url 'user_profile' spot.created_by.username %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-id-card me-1"></i>プロフィールを見る
+                </a>
             </div>
             <div class="card-body">
                 {% for related_spot in related_spots %}

@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.paginator import Paginator
@@ -125,6 +126,27 @@ def add_spot(request):
 
 
 @login_required
+def edit_spot(request, spot_id: int):
+    """スポット編集ページ（投稿者のみ）"""
+
+    spot = get_object_or_404(Spot, id=spot_id)
+    if spot.created_by != request.user:
+        messages.error(request, '自分の投稿のみ編集できます。')
+        return redirect('spot_detail', spot_id=spot.id)
+
+    if request.method == 'POST':
+        form = SpotForm(request.POST, request.FILES, instance=spot)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'スポットを更新しました！')
+            return redirect('spot_detail', spot_id=spot.id)
+    else:
+        form = SpotForm(instance=spot)
+
+    return render(request, 'spots/add_spot.html', {'form': form, 'spot': spot, 'is_edit': True})
+
+
+@login_required
 def add_review(request, spot_id):
     """レビュー投稿"""
     spot = get_object_or_404(Spot, id=spot_id)
@@ -178,6 +200,37 @@ def profile(request):
         'profile': profile,
     }
     return render(request, 'spots/profile.html', context)
+
+
+def user_profile(request, username):
+    """他ユーザーのプロフィール閲覧ページ"""
+    profile_user = get_object_or_404(User, username=username)
+    profile, _ = UserProfile.objects.get_or_create(user=profile_user)
+
+    user_spots = (
+        profile_user.spot_set.select_related('created_by')
+        .prefetch_related('tags')
+        .order_by('-created_at')
+    )
+    user_reviews = profile_user.review_set.select_related('spot').order_by('-created_at')
+    favorite_spots = (
+        profile.favorite_spots.select_related('created_by')
+        .prefetch_related('tags')
+        .order_by('-created_at')[:6]
+    )
+
+    context = {
+        'profile_user': profile_user,
+        'profile': profile,
+        'spot_count': user_spots.count(),
+        'review_count': user_reviews.count(),
+        'favorite_count': profile.favorite_spots.count(),
+        'recent_spots': user_spots[:6],
+        'recent_reviews': user_reviews[:5],
+        'recent_favorites': favorite_spots,
+        'can_edit_profile': request.user.is_authenticated and request.user == profile_user,
+    }
+    return render(request, 'spots/user_profile.html', context)
 
 
 def register(request):
