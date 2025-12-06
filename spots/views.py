@@ -126,6 +126,27 @@ def add_spot(request):
 
 
 @login_required
+def edit_spot(request, spot_id: int):
+    """スポット編集ページ（投稿者のみ）"""
+
+    spot = get_object_or_404(Spot, id=spot_id)
+    if spot.created_by != request.user:
+        messages.error(request, '自分の投稿のみ編集できます。')
+        return redirect('spot_detail', spot_id=spot.id)
+
+    if request.method == 'POST':
+        form = SpotForm(request.POST, request.FILES, instance=spot)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'スポットを更新しました！')
+            return redirect('spot_detail', spot_id=spot.id)
+    else:
+        form = SpotForm(instance=spot)
+
+    return render(request, 'spots/add_spot.html', {'form': form, 'spot': spot, 'is_edit': True})
+
+
+@login_required
 def add_review(request, spot_id):
     """レビュー投稿"""
     spot = get_object_or_404(Spot, id=spot_id)
